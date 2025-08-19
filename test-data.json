@@ -1,0 +1,27 @@
+{
+  "tripleImpactAssessment": {
+    "problemSolved": "75",
+    "beneficiaries": "",
+    "resourcesUsed": "",
+    "communityInvolvement": "",
+    "longTermImpact": ""
+  },
+  "executiveSummary": "12312312312",
+  "businessDescription": "",
+  "marketAnalysis": "",
+  "competitiveAnalysis": "",
+  "marketingPlan": "",
+  "operationalPlan": "",
+  "managementTeam": "",
+  "financialProjections": {
+    "startupCosts": 0,
+    "monthlyRevenue": 0,
+    "monthlyExpenses": 0,
+    "breakEvenMonth": 0,
+    "revenueStreams": []
+  },
+  "riskAnalysis": "",
+  "currentStep": 0,
+  "completionPercentage": 25,
+  "isCompleted": false
+}

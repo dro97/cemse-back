@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: full_express_api
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d full_express_api"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - api-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - api-network
+
+  # API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/full_express_api
+      
+      # Application
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      
+      # Redis (optional)
+      REDIS_URL: redis://redis:6379
+      
+      # Logging
+      LOG_LEVEL: info
+      
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - api-network
+    command: >
+      sh -c "
+        echo '🔄 Waiting for database to be ready...' &&
+        npx prisma migrate deploy &&
+        echo '🌱 Seeding database...' &&
+        npm run prisma:seed &&
+        echo '🚀 Starting API server...' &&
+        npm start
+      "
+
+  # Nginx Reverse Proxy (optional)
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - api-network
+    profiles:
+      - production
+
+  # Prisma Studio (development only)
+  prisma-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/full_express_api
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./prisma:/app/prisma
+    command: npx prisma studio --hostname 0.0.0.0 --port 5555
+    networks:
+      - api-network
+    profiles:
+      - development
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  api-network:
+    driver: bridge 

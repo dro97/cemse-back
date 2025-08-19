@@ -1,0 +1,3233 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Full Express API",
+    "version": "1.0.0",
+    "description": "A comprehensive Express API with Prisma"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api",
+      "description": "Development server"
+    },
+    {
+      "url": "https://back-end-production-17b6.up.railway.app/api",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/business-plans": {
+      "get": {
+        "summary": "Get all business plans",
+        "tags": [
+          "Business Plans"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all business plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BusinessPlan"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new business plan",
+        "tags": [
+          "Business Plans"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessPlanInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Business plan created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/business-plans/{id}": {
+      "get": {
+        "summary": "Get a business plan by ID",
+        "tags": [
+          "Business Plans"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Business plan ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business plan found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessPlan"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Business plan not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a business plan",
+        "tags": [
+          "Business Plans"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Business plan ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessPlanInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Business plan updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessPlan"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Business plan not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a business plan",
+        "tags": [
+          "Business Plans"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Business plan ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Business plan deleted successfully"
+          },
+          "404": {
+            "description": "Business plan not found"
+          }
+        }
+      }
+    },
+    "/certificates": {
+      "get": {
+        "summary": "Get all certificates",
+        "tags": [
+          "Certificates"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all certificates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Certificate"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new certificate",
+        "tags": [
+          "Certificates"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Certificate created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/certificates/{id}": {
+      "get": {
+        "summary": "Get a certificate by ID",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Certificate ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificate"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Certificate not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a certificate",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Certificate ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Certificate updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificate"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Certificate not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a certificate",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Certificate ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Certificate deleted successfully"
+          },
+          "404": {
+            "description": "Certificate not found"
+          }
+        }
+      }
+    },
+    "/courses": {
+      "get": {
+        "summary": "Get all courses",
+        "tags": [
+          "Courses"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all courses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Course"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new course",
+        "tags": [
+          "Courses"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Course created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/courses/{id}": {
+      "get": {
+        "summary": "Get a course by ID",
+        "tags": [
+          "Courses"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Course ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Course found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a course",
+        "tags": [
+          "Courses"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Course ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Course updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a course",
+        "tags": [
+          "Courses"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Course ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Course deleted successfully"
+          },
+          "404": {
+            "description": "Course not found"
+          }
+        }
+      }
+    },
+    "/external-api-keys": {
+      "post": {
+        "summary": "Crear una nueva API Key externa",
+        "tags": [
+          "ExternalApiKey"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Nombre del sistema externo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API Key creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Listar todas las API Keys externas",
+        "tags": [
+          "ExternalApiKey"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de API Keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "active": {
+                        "type": "boolean"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "revokedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/external-api-keys/{id}/revoke": {
+      "patch": {
+        "summary": "Revocar una API Key externa",
+        "tags": [
+          "ExternalApiKey"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID de la API Key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API Key revocada"
+          },
+          "404": {
+            "description": "API Key no encontrada"
+          }
+        }
+      }
+    },
+    "/job-offers": {
+      "get": {
+        "summary": "Get all job offers",
+        "tags": [
+          "Job Offers"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all job offers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobOffer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new job offer",
+        "tags": [
+          "Job Offers"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobOfferInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job offer created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOffer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/job-offers/{id}": {
+      "get": {
+        "summary": "Get a job offer by ID",
+        "tags": [
+          "Job Offers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job offer ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job offer found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOffer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job offer not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a job offer",
+        "tags": [
+          "Job Offers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job offer ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobOfferInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job offer updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOffer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job offer not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a job offer",
+        "tags": [
+          "Job Offers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job offer ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Job offer deleted successfully"
+          },
+          "404": {
+            "description": "Job offer not found"
+          }
+        }
+      }
+    },
+    "/lessons": {
+      "get": {
+        "summary": "Get all lessons",
+        "tags": [
+          "Lessons"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all lessons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Lesson"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new lesson",
+        "tags": [
+          "Lessons"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lesson created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lesson"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/lessons/{id}": {
+      "get": {
+        "summary": "Get a lesson by ID",
+        "tags": [
+          "Lessons"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lesson ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lesson"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a lesson",
+        "tags": [
+          "Lessons"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lesson ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lesson updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lesson"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a lesson",
+        "tags": [
+          "Lessons"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Lesson ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Lesson deleted successfully"
+          },
+          "404": {
+            "description": "Lesson not found"
+          }
+        }
+      }
+    },
+    "/news-articles": {
+      "get": {
+        "summary": "Get all news articles",
+        "tags": [
+          "News Articles"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all news articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NewsArticle"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new news article",
+        "tags": [
+          "News Articles"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsArticleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "News article created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsArticle"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/news-articles/{id}": {
+      "get": {
+        "summary": "Get a news article by ID",
+        "tags": [
+          "News Articles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "News article ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "News article found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsArticle"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "News article not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a news article",
+        "tags": [
+          "News Articles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "News article ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewsArticleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "News article updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsArticle"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "News article not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a news article",
+        "tags": [
+          "News Articles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "News article ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "News article deleted successfully"
+          },
+          "404": {
+            "description": "News article not found"
+          }
+        }
+      }
+    },
+    "/profiles": {
+      "get": {
+        "summary": "Get all profiles",
+        "tags": [
+          "Profiles"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new profile",
+        "tags": [
+          "Profiles"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/profiles/{id}": {
+      "get": {
+        "summary": "Get a profile by ID",
+        "tags": [
+          "Profiles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Profile ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a profile",
+        "tags": [
+          "Profiles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Profile ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a profile",
+        "tags": [
+          "Profiles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Profile ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Profile deleted successfully"
+          },
+          "404": {
+            "description": "Profile not found"
+          }
+        }
+      }
+    },
+    "/profiles/external/{documentNumber}": {
+      "get": {
+        "summary": "Consulta segura de perfil de joven/adolescente para sistemas externos",
+        "tags": [
+          "Profiles"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "documentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Número de documento del joven/adolescente"
+          }
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Key inválida"
+          },
+          "404": {
+            "description": "Perfil no encontrado o no es joven/adolescente"
+          }
+        }
+      }
+    },
+    "/quizzes": {
+      "get": {
+        "summary": "Get all quizzes",
+        "tags": [
+          "Quizzes"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all quizzes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Quiz"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new quiz",
+        "tags": [
+          "Quizzes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Quiz created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quiz"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/quizzes/{id}": {
+      "get": {
+        "summary": "Get a quiz by ID",
+        "tags": [
+          "Quizzes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Quiz ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quiz found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quiz"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Quiz not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a quiz",
+        "tags": [
+          "Quizzes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Quiz ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quiz updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quiz"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Quiz not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a quiz",
+        "tags": [
+          "Quizzes"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Quiz ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Quiz deleted successfully"
+          },
+          "404": {
+            "description": "Quiz not found"
+          }
+        }
+      }
+    },
+    "/resources": {
+      "get": {
+        "summary": "Get all resources",
+        "tags": [
+          "Resources"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Resource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new resource",
+        "tags": [
+          "Resources"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResourceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Resource created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{id}": {
+      "get": {
+        "summary": "Get a resource by ID",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Resource ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a resource by ID",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Resource ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResourceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resource updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a resource by ID",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Resource ID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Resource deleted"
+          },
+          "404": {
+            "description": "Resource not found"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered"
+          },
+          "400": {
+            "description": "Missing or invalid data"
+          },
+          "409": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login and get a JWT token",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refresh access token using a refresh token",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke a refresh token (logout)",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token revoked"
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get current user info",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token"
+          }
+        }
+      }
+    },
+    "/auth/check-role/{role}": {
+      "get": {
+        "summary": "Check if current user has a specific role",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "JOVENES",
+                "ADOLESCENTES",
+                "EMPRESAS",
+                "GOBIERNOS_MUNICIPALES",
+                "CENTROS_DE_FORMACION",
+                "ONGS_Y_FUNDACIONES",
+                "CLIENT",
+                "AGENT",
+                "SUPER_ADMIN"
+              ]
+            },
+            "description": "Role to check"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role check result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing token"
+          }
+        }
+      }
+    },
+    "/auth/users": {
+      "get": {
+        "summary": "Get all users (Super Admin only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all users"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin required"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new user (Super Admin only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "400": {
+            "description": "Invalid data"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin required"
+          },
+          "409": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
+    "/auth/users/{id}": {
+      "get": {
+        "summary": "Get a user by ID (Super Admin only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin required"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a user (Super Admin only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "JOVENES",
+                      "ADOLESCENTES",
+                      "EMPRESAS",
+                      "GOBIERNOS_MUNICIPALES",
+                      "CENTROS_DE_FORMACION",
+                      "ONGS_Y_FUNDACIONES",
+                      "CLIENT",
+                      "AGENT",
+                      "SUPER_ADMIN"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated"
+          },
+          "400": {
+            "description": "Invalid data"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin required"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a user (Super Admin only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin required"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/socket/status": {
+      "get": {
+        "summary": "Get Socket.IO server status",
+        "tags": [
+          "Socket.IO"
+        ],
+        "responses": {
+          "200": {
+            "description": "Socket.IO server status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "running"
+                    },
+                    "connections": {
+                      "type": "number",
+                      "description": "Number of active connections"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/socket/emit": {
+      "post": {
+        "summary": "Emit a custom event to all connected clients",
+        "tags": [
+          "Socket.IO"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocketEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event emitted successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BusinessPlan": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "studentId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the business plan"
+          },
+          "title": {
+            "type": "string",
+            "description": "Business plan title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Business plan description"
+          },
+          "studentId": {
+            "type": "string",
+            "description": "ID of the student who created the plan"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "APPROVED",
+              "REJECTED"
+            ],
+            "description": "Business plan status"
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Feedback on the business plan"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Business plan creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Business plan last update timestamp"
+          }
+        }
+      },
+      "BusinessPlanInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "studentId"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "feedback": {
+            "type": "string"
+          }
+        }
+      },
+      "Certificate": {
+        "type": "object",
+        "required": [
+          "studentId",
+          "courseId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the certificate"
+          },
+          "studentId": {
+            "type": "string",
+            "description": "ID of the student who earned the certificate"
+          },
+          "courseId": {
+            "type": "string",
+            "description": "ID of the course the certificate is for"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Certificate issuance timestamp"
+          },
+          "certificateUrl": {
+            "type": "string",
+            "description": "URL to the certificate document"
+          }
+        }
+      },
+      "CertificateInput": {
+        "type": "object",
+        "required": [
+          "studentId",
+          "courseId"
+        ],
+        "properties": {
+          "studentId": {
+            "type": "string"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "certificateUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "Course": {
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "description",
+          "duration",
+          "level",
+          "category"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "shortDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnail": {
+            "type": "string",
+            "nullable": true
+          },
+          "videoPreview": {
+            "type": "string",
+            "nullable": true
+          },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "BEGINNER",
+              "INTERMEDIATE",
+              "ADVANCED"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "SOFT_SKILLS",
+              "BASIC_COMPETENCIES",
+              "JOB_PLACEMENT",
+              "ENTREPRENEURSHIP",
+              "TECHNICAL_SKILLS",
+              "DIGITAL_LITERACY",
+              "COMMUNICATION",
+              "LEADERSHIP"
+            ]
+          },
+          "isMandatory": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          },
+          "rating": {
+            "type": "number",
+            "format": "float"
+          },
+          "studentsCount": {
+            "type": "integer"
+          },
+          "completionRate": {
+            "type": "number",
+            "format": "float"
+          },
+          "totalLessons": {
+            "type": "integer"
+          },
+          "totalQuizzes": {
+            "type": "integer"
+          },
+          "totalResources": {
+            "type": "integer"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certification": {
+            "type": "boolean"
+          },
+          "includedMaterials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "instructorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CourseInput": {
+        "type": "object",
+        "properties": "(igual que Course, pero todos opcionales menos los requeridos)"
+      },
+      "JobOffer": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "contractType",
+          "workModality",
+          "location",
+          "municipality",
+          "department",
+          "experienceLevel",
+          "companyId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "requirements": {
+            "type": "string"
+          },
+          "benefits": {
+            "type": "string",
+            "nullable": true
+          },
+          "salaryMin": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "salaryMax": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "salaryCurrency": {
+            "type": "string"
+          },
+          "contractType": {
+            "type": "string",
+            "enum": [
+              "FULL_TIME",
+              "PART_TIME",
+              "INTERNSHIP",
+              "VOLUNTEER",
+              "FREELANCE"
+            ]
+          },
+          "workSchedule": {
+            "type": "string"
+          },
+          "workModality": {
+            "type": "string",
+            "enum": [
+              "ON_SITE",
+              "REMOTE",
+              "HYBRID"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "municipality": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "experienceLevel": {
+            "type": "string",
+            "enum": [
+              "NO_EXPERIENCE",
+              "ENTRY_LEVEL",
+              "MID_LEVEL",
+              "SENIOR_LEVEL"
+            ]
+          },
+          "educationRequired": {
+            "type": "string",
+            "enum": [
+              "PRIMARY",
+              "SECONDARY",
+              "TECHNICAL",
+              "UNIVERSITY",
+              "POSTGRADUATE",
+              "OTHER"
+            ],
+            "nullable": true
+          },
+          "skillsRequired": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "desiredSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "applicationDeadline": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "CLOSED",
+              "DRAFT"
+            ]
+          },
+          "viewsCount": {
+            "type": "integer"
+          },
+          "applicationsCount": {
+            "type": "integer"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JobOfferInput": {
+        "type": "object",
+        "properties": "(igual que JobOffer, pero todos opcionales menos los requeridos)"
+      },
+      "Lesson": {
+        "type": "object",
+        "required": [
+          "title",
+          "content",
+          "order",
+          "moduleId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the lesson"
+          },
+          "title": {
+            "type": "string",
+            "description": "Lesson title"
+          },
+          "content": {
+            "type": "string",
+            "description": "Lesson content"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Lesson order within module"
+          },
+          "moduleId": {
+            "type": "string",
+            "description": "ID of the module this lesson belongs to"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Lesson duration in minutes"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Lesson creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Lesson last update timestamp"
+          }
+        }
+      },
+      "LessonInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "content",
+          "order",
+          "moduleId"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "moduleId": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer"
+          }
+        }
+      },
+      "NewsArticle": {
+        "type": "object",
+        "required": [
+          "title",
+          "content",
+          "author"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the news article"
+          },
+          "title": {
+            "type": "string",
+            "description": "Article title"
+          },
+          "content": {
+            "type": "string",
+            "description": "Article content"
+          },
+          "author": {
+            "type": "string",
+            "description": "Article author"
+          },
+          "isPublished": {
+            "type": "boolean",
+            "description": "Whether the article is published"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Publication timestamp"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Article creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Article last update timestamp"
+          }
+        }
+      },
+      "NewsArticleInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "content",
+          "author"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "required": [
+          "userId",
+          "status",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "PENDING_VERIFICATION",
+              "SUSPENDED"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "YOUTH",
+              "ADOLESCENTS",
+              "COMPANIES",
+              "MUNICIPAL_GOVERNMENTS",
+              "TRAINING_CENTERS",
+              "NGOS_AND_FOUNDATIONS",
+              "SUPERADMIN"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "municipality": {
+            "type": "string",
+            "nullable": true
+          },
+          "department": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "nullable": true
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "documentNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "educationLevel": {
+            "type": "string",
+            "enum": [
+              "PRIMARY",
+              "SECONDARY",
+              "TECHNICAL",
+              "UNIVERSITY",
+              "POSTGRADUATE",
+              "OTHER"
+            ],
+            "nullable": true
+          },
+          "currentInstitution": {
+            "type": "string",
+            "nullable": true
+          },
+          "graduationYear": {
+            "type": "integer",
+            "nullable": true
+          },
+          "isStudying": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workExperience": {
+            "type": "object",
+            "nullable": true
+          },
+          "companyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taxId": {
+            "type": "string",
+            "nullable": true
+          },
+          "legalRepresentative": {
+            "type": "string",
+            "nullable": true
+          },
+          "businessSector": {
+            "type": "string",
+            "nullable": true
+          },
+          "companySize": {
+            "type": "string",
+            "enum": [
+              "MICRO",
+              "SMALL",
+              "MEDIUM",
+              "LARGE"
+            ],
+            "nullable": true
+          },
+          "companyDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "foundedYear": {
+            "type": "integer",
+            "nullable": true
+          },
+          "institutionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "institutionType": {
+            "type": "string",
+            "nullable": true
+          },
+          "serviceArea": {
+            "type": "string",
+            "nullable": true
+          },
+          "specialization": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "institutionDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileCompletion": {
+            "type": "integer"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "parentalConsent": {
+            "type": "boolean"
+          },
+          "parentEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "consentDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "achievements": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "ProfileInput": {
+        "type": "object",
+        "properties": "(igual que Profile, pero todos opcionales menos userId, status y role)"
+      },
+      "Quiz": {
+        "type": "object",
+        "required": [
+          "title",
+          "moduleId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the quiz"
+          },
+          "title": {
+            "type": "string",
+            "description": "Quiz title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Quiz description"
+          },
+          "moduleId": {
+            "type": "string",
+            "description": "ID of the module this quiz belongs to"
+          },
+          "timeLimit": {
+            "type": "integer",
+            "description": "Time limit in minutes"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the quiz is active"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Quiz creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Quiz last update timestamp"
+          }
+        }
+      },
+      "QuizInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "moduleId"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "moduleId": {
+            "type": "string"
+          },
+          "timeLimit": {
+            "type": "integer"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RefreshToken": {
+        "type": "object",
+        "required": [
+          "token",
+          "userId",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Resource": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "type",
+          "category",
+          "format",
+          "thumbnail",
+          "author",
+          "publishedDate"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the resource"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "downloadUrl": {
+            "type": "string"
+          },
+          "externalUrl": {
+            "type": "string"
+          },
+          "thumbnail": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "publishedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "downloads": {
+            "type": "integer"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ResourceInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "type",
+          "category",
+          "format",
+          "thumbnail",
+          "author",
+          "publishedDate"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "downloadUrl": {
+            "type": "string"
+          },
+          "externalUrl": {
+            "type": "string"
+          },
+          "thumbnail": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "publishedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "role"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "JOVENES",
+              "ADOLESCENTES",
+              "EMPRESAS",
+              "GOBIERNOS_MUNICIPALES",
+              "CENTROS_DE_FORMACION",
+              "ONGS_Y_FUNDACIONES",
+              "CLIENT",
+              "AGENT",
+              "SUPER_ADMIN"
+            ]
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "RoleCheck": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "SocketEvent": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "description": "Event name"
+          },
+          "data": {
+            "type": "object",
+            "description": "Event data"
+          }
+        }
+      },
+      "SocketConnection": {
+        "type": "object",
+        "properties": {
+          "socketId": {
+            "type": "string"
+          },
+          "connected": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication and user role management"
+    }
+  ]
+}

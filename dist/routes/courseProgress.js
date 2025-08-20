@@ -38,6 +38,7 @@ const CourseProgressController = __importStar(require("../controllers/CourseProg
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
+router.post("/update-video-progress", auth_1.requireStudent, CourseProgressController.updateVideoProgress);
 router.post("/complete-lesson", auth_1.requireStudent, CourseProgressController.completeLesson);
 router.post("/complete-module", auth_1.requireStudent, CourseProgressController.completeModule);
 router.get("/enrollment/:enrollmentId", CourseProgressController.getEnrollmentProgress);

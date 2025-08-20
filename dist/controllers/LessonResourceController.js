@@ -202,7 +202,7 @@ async function updateLessonResource(req, res) {
             return res.status(403).json({ message: "Access denied. Only instructors and organizations can update lesson resources" });
         }
         const existingResource = await prisma_1.prisma.lessonResource.findUnique({
-            where: { id }
+            where: { id: id || '' }
         });
         if (!existingResource) {
             return res.status(404).json({ message: "Lesson resource not found" });
@@ -287,7 +287,7 @@ async function deleteLessonResource(req, res) {
             return res.status(403).json({ message: "Access denied. Only admins can delete lesson resources" });
         }
         const resource = await prisma_1.prisma.lessonResource.findUnique({
-            where: { id }
+            where: { id: id || '' }
         });
         if (!resource) {
             return res.status(404).json({ message: "Lesson resource not found" });
@@ -309,7 +309,7 @@ async function deleteLessonResource(req, res) {
             }
         }
         await prisma_1.prisma.lessonResource.delete({
-            where: { id }
+            where: { id: id || '' }
         });
         return res.json({ message: "Lesson resource deleted successfully" });
     }

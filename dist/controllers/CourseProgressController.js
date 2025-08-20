@@ -1,9 +1,97 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateVideoProgress = updateVideoProgress;
 exports.completeLesson = completeLesson;
 exports.completeModule = completeModule;
 exports.getEnrollmentProgress = getEnrollmentProgress;
 const prisma_1 = require("../lib/prisma");
+async function updateVideoProgress(req, res) {
+    try {
+        const user = req.user;
+        const { enrollmentId, lessonId, videoProgress, timeSpent = 0 } = req.body;
+        if (!enrollmentId || !lessonId || videoProgress === undefined) {
+            return res.status(400).json({
+                message: "enrollmentId, lessonId, and videoProgress are required"
+            });
+        }
+        if (videoProgress < 0 || videoProgress > 1) {
+            return res.status(400).json({
+                message: "videoProgress must be between 0 and 1"
+            });
+        }
+        const enrollment = await prisma_1.prisma.courseEnrollment.findUnique({
+            where: { id: enrollmentId || '' }
+        });
+        if (!enrollment) {
+            return res.status(404).json({ message: "Enrollment not found" });
+        }
+        if (user.type === 'user' && enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
+            return res.status(403).json({ message: "Access denied" });
+        }
+        const lesson = await prisma_1.prisma.lesson.findUnique({
+            where: { id: lessonId || '' },
+            include: {
+                module: {
+                    select: {
+                        courseId: true
+                    }
+                }
+            }
+        });
+        if (!lesson) {
+            return res.status(404).json({ message: "Lesson not found" });
+        }
+        if (lesson.module.courseId !== enrollment.courseId) {
+            return res.status(400).json({
+                message: "Lesson does not belong to the enrolled course"
+            });
+        }
+        const lessonProgress = await prisma_1.prisma.lessonProgress.upsert({
+            where: {
+                enrollmentId_lessonId: {
+                    enrollmentId,
+                    lessonId
+                }
+            },
+            update: {
+                videoProgress,
+                timeSpent,
+                lastWatchedAt: new Date(),
+                isCompleted: videoProgress >= 1.0,
+                completedAt: videoProgress >= 1.0 ? new Date() : undefined
+            },
+            create: {
+                enrollmentId,
+                lessonId,
+                videoProgress,
+                timeSpent,
+                lastWatchedAt: new Date(),
+                isCompleted: videoProgress >= 1.0,
+                completedAt: videoProgress >= 1.0 ? new Date() : null
+            },
+            include: {
+                lesson: {
+                    select: {
+                        id: true,
+                        title: true,
+                        duration: true
+                    }
+                }
+            }
+        });
+        return res.json({
+            message: "Video progress updated successfully",
+            progress: lessonProgress
+        });
+    }
+    catch (error) {
+        console.error("Error updating video progress:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
 async function completeLesson(req, res) {
     try {
         const user = req.user;

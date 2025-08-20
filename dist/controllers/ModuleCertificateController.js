@@ -193,7 +193,7 @@ async function updateModuleCertificate(req, res) {
             return res.status(403).json({ message: "Access denied. Only admins and instructors can update certificates" });
         }
         const existingCertificate = await prisma_1.prisma.moduleCertificate.findUnique({
-            where: { id }
+            where: { id: id || '' }
         });
         if (!existingCertificate) {
             return res.status(404).json({ message: "Module certificate not found" });
@@ -251,13 +251,13 @@ async function deleteModuleCertificate(req, res) {
             return res.status(403).json({ message: "Access denied. Only admins can delete certificates" });
         }
         const certificate = await prisma_1.prisma.moduleCertificate.findUnique({
-            where: { id }
+            where: { id: id || '' }
         });
         if (!certificate) {
             return res.status(404).json({ message: "Module certificate not found" });
         }
         await prisma_1.prisma.moduleCertificate.delete({
-            where: { id }
+            where: { id: id || '' }
         });
         return res.json({ message: "Module certificate deleted successfully" });
     }

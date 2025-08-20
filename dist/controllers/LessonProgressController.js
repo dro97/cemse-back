@@ -309,7 +309,7 @@ async function getCourseProgress(req, res) {
         const { courseId } = req.params;
         const enrollment = await prisma_1.prisma.courseEnrollment.findFirst({
             where: {
-                courseId,
+                courseId: courseId || '',
                 studentId: user.id
             }
         });
@@ -342,7 +342,7 @@ async function getCourseProgress(req, res) {
         const totalLessons = await prisma_1.prisma.lesson.count({
             where: {
                 module: {
-                    courseId
+                    courseId: courseId || ''
                 }
             }
         });

@@ -7,6 +7,9 @@ const router = Router();
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+// POST /course-progress/update-video-progress - Update video progress for a lesson
+router.post("/update-video-progress", requireStudent, CourseProgressController.updateVideoProgress);
+
 // POST /course-progress/complete-lesson - Complete a lesson and update progress
 router.post("/complete-lesson", requireStudent, CourseProgressController.completeLesson);
 

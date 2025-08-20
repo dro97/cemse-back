@@ -177,8 +177,8 @@ async function markMessageAsRead(req, res) {
         }
         const message = await prisma_1.prisma.jobApplicationMessage.findFirst({
             where: {
-                id: messageId,
-                applicationId
+                id: messageId || '',
+                applicationId: applicationId || ''
             },
             include: {
                 application: {

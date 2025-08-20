@@ -317,6 +317,7 @@ async function serveVideo(req, res) {
             };
             res.writeHead(206, head);
             file.pipe(res);
+            return;
         }
         else {
             const head = {

@@ -3,6 +3,145 @@ import { Request, Response } from "express";
 
 /**
  * @swagger
+ * /api/course-progress/update-video-progress:
+ *   post:
+ *     summary: Update video progress for a lesson
+ *     tags: [Course Progress]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - enrollmentId
+ *               - lessonId
+ *               - videoProgress
+ *             properties:
+ *               enrollmentId:
+ *                 type: string
+ *               lessonId:
+ *                 type: string
+ *               videoProgress:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 1
+ *               timeSpent:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Video progress updated successfully
+ *       404:
+ *         description: Enrollment or lesson not found
+ */
+export async function updateVideoProgress(req: Request, res: Response): Promise<Response> {
+  try {
+    const user = (req as any).user;
+    const { enrollmentId, lessonId, videoProgress, timeSpent = 0 } = req.body;
+
+    if (!enrollmentId || !lessonId || videoProgress === undefined) {
+      return res.status(400).json({
+        message: "enrollmentId, lessonId, and videoProgress are required"
+      });
+    }
+
+    // Validate videoProgress range
+    if (videoProgress < 0 || videoProgress > 1) {
+      return res.status(400).json({
+        message: "videoProgress must be between 0 and 1"
+      });
+    }
+
+    // Verificar que el usuario tiene acceso a esta inscripción
+    const enrollment = await prisma.courseEnrollment.findUnique({
+      where: { id: enrollmentId || '' }
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ message: "Enrollment not found" });
+    }
+
+    if (user.type === 'user' && enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Verificar que la lección existe
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId || '' },
+      include: {
+        module: {
+          select: {
+            courseId: true
+          }
+        }
+      }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ message: "Lesson not found" });
+    }
+
+    // Verificar que la lección pertenece al curso de la inscripción
+    if ((lesson as any).module.courseId !== enrollment.courseId) {
+      return res.status(400).json({ 
+        message: "Lesson does not belong to the enrolled course" 
+      });
+    }
+
+    // Crear o actualizar el progreso de la lección
+    const lessonProgress = await prisma.lessonProgress.upsert({
+      where: {
+        enrollmentId_lessonId: {
+          enrollmentId,
+          lessonId
+        }
+      },
+      update: {
+        videoProgress,
+        timeSpent,
+        lastWatchedAt: new Date(),
+        // Marcar como completado si el progreso es 100%
+        isCompleted: videoProgress >= 1.0,
+        completedAt: videoProgress >= 1.0 ? new Date() : undefined
+      },
+      create: {
+        enrollmentId,
+        lessonId,
+        videoProgress,
+        timeSpent,
+        lastWatchedAt: new Date(),
+        isCompleted: videoProgress >= 1.0,
+        completedAt: videoProgress >= 1.0 ? new Date() : null
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            duration: true
+          }
+        }
+      }
+    });
+
+    return res.json({
+      message: "Video progress updated successfully",
+      progress: lessonProgress
+    });
+
+  } catch (error: any) {
+    console.error("Error updating video progress:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
+/**
+ * @swagger
  * /api/course-progress/complete-lesson:
  *   post:
  *     summary: Complete a lesson and update module/course progress

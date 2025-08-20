@@ -50,7 +50,7 @@ async function getInstructor(req, res) {
     try {
         const instructor = await prisma_1.prisma.profile.findFirst({
             where: {
-                id: req.params.id,
+                id: req.params['id'] || '',
                 role: 'INSTRUCTOR'
             },
             include: {
@@ -141,10 +141,10 @@ async function createInstructor(req, res) {
 }
 async function updateInstructor(req, res) {
     try {
-        const { firstName, lastName, email, specialization, bio, experience, education, isActive } = req.body;
+        const { firstName, lastName, email, specialization, experience, education, isActive } = req.body;
         const instructor = await prisma_1.prisma.profile.findFirst({
             where: {
-                id: req.params.id,
+                id: req.params['id'] || '',
                 role: 'INSTRUCTOR'
             }
         });
@@ -155,7 +155,7 @@ async function updateInstructor(req, res) {
             const existingProfile = await prisma_1.prisma.profile.findFirst({
                 where: {
                     email,
-                    id: { not: req.params['id'] }
+                    id: { not: req.params['id'] || '' }
                 }
             });
             if (existingProfile) {
@@ -165,7 +165,7 @@ async function updateInstructor(req, res) {
             }
         }
         const updatedInstructor = await prisma_1.prisma.profile.update({
-            where: { id: req.params['id'] },
+            where: { id: req.params['id'] || '' },
             data: {
                 firstName,
                 lastName,
@@ -190,7 +190,7 @@ async function deleteInstructor(req, res) {
     try {
         const instructor = await prisma_1.prisma.profile.findFirst({
             where: {
-                id: req.params.id,
+                id: req.params['id'] || '',
                 role: 'INSTRUCTOR'
             },
             include: {
@@ -208,7 +208,7 @@ async function deleteInstructor(req, res) {
         }
         await prisma_1.prisma.$transaction(async (tx) => {
             await tx.profile.delete({
-                where: { id: req.params['id'] }
+                where: { id: req.params['id'] || '' }
             });
             await tx.user.delete({
                 where: { id: instructor.userId }
@@ -282,7 +282,7 @@ async function instructorLogin(req, res) {
         return res.status(500).json({ message: "Internal server error" });
     }
 }
-async function getInstructorStats(req, res) {
+async function getInstructorStats(_req, res) {
     try {
         const totalInstructors = await prisma_1.prisma.profile.count({
             where: { role: 'INSTRUCTOR' }

@@ -100,9 +100,9 @@ export async function listQuizs(_req: Request, res: Response) {
  *       404:
  *         description: Quiz not found
  */
-export async function getQuiz(req: Request, res: Response) {
+export async function getQuiz(req: Request, res: Response): Promise<Response> {
   const item = await prisma.quiz.findUnique({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   if (!item) return res.status(404).json({ message: "Not found" });
   return res.json(item);
@@ -130,7 +130,7 @@ export async function getQuiz(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createQuiz(req: Request, res: Response) {
+export async function createQuiz(req: Request, res: Response): Promise<Response> {
   try {
     // Debug logs
     console.log('🔍 DEBUG - createQuiz llamado');
@@ -193,10 +193,10 @@ export async function createQuiz(req: Request, res: Response) {
     // Emit real-time update
     io.emit("quiz:created", newItem);
     
-    res.status(201).json(newItem);
+    return res.status(201).json(newItem);
   } catch (error) {
     console.error('Error creando quiz:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error interno del servidor',
       message: error instanceof Error ? error.message : 'Error desconocido'
     });
@@ -232,9 +232,9 @@ export async function createQuiz(req: Request, res: Response) {
  *       404:
  *         description: Quiz not found
  */
-export async function updateQuiz(req: Request, res: Response) {
+export async function updateQuiz(req: Request, res: Response): Promise<Response> {
   try {
-    const quizId = req.params["id"];
+    const quizId = req.params['id'];
     if (!quizId) {
       return res.status(400).json({
         error: 'ID requerido',
@@ -272,7 +272,7 @@ export async function updateQuiz(req: Request, res: Response) {
     if (timeLimit !== undefined) updateData.timeLimit = timeLimit ? parseInt(timeLimit as string) : null;
     if (passingScore !== undefined) updateData.passingScore = parseInt(passingScore as string);
     if (showCorrectAnswers !== undefined) updateData.showCorrectAnswers = showCorrectAnswers === "true" || showCorrectAnswers === true;
-    if (isActive !== undefined) updateData.isActive = isActive === "true" || isActive === true;
+    if (isActive !== undefined) updateData.active = isActive === "true" || isActive === true;
 
     const updated = await prisma.quiz.update({
       where: { id: quizId },
@@ -282,10 +282,10 @@ export async function updateQuiz(req: Request, res: Response) {
     // Emit real-time update
     io.emit("quiz:updated", updated);
     
-    res.json(updated);
+    return res.json(updated);
   } catch (error) {
     console.error('Error actualizando quiz:', error);
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Error interno del servidor',
       message: error instanceof Error ? error.message : 'Error desconocido'
     });
@@ -311,13 +311,13 @@ export async function updateQuiz(req: Request, res: Response) {
  *       404:
  *         description: Quiz not found
  */
-export async function deleteQuiz(req: Request, res: Response) {
+export async function deleteQuiz(req: Request, res: Response): Promise<Response> {
   await prisma.quiz.delete({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   
   // Emit real-time update
-  io.emit("quiz:deleted", { id: req.params["id"] });
+  io.emit("quiz:deleted", { id: req.params['id'] });
   
   return res.status(204).end();
 }

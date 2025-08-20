@@ -84,7 +84,7 @@ function getPerformanceMetrics(_req, res) {
         counts[metric.endpoint] = (counts[metric.endpoint] || 0) + 1;
         return counts;
     }, {});
-    res.json({
+    return res.json({
         totalRequests: recentMetrics.length,
         averageResponseTime: Math.round(averageResponseTime * 100) / 100,
         statusCodeCounts,
@@ -100,7 +100,7 @@ function getErrorLogs(_req, res) {
         counts[error.error] = (counts[error.error] || 0) + 1;
         return counts;
     }, {});
-    res.json({
+    return res.json({
         totalErrors: recentErrors.length,
         errorCounts,
         recentErrors: recentErrors.slice(-10),
@@ -120,7 +120,7 @@ function getRequestLogs(_req, res) {
         counts[request.method] = (counts[request.method] || 0) + 1;
         return counts;
     }, {});
-    res.json({
+    return res.json({
         totalRequests: recentRequests.length,
         userRoleCounts,
         methodCounts,
@@ -139,7 +139,7 @@ function getHealthWithMetrics(_req, res) {
     const errorRate = recentMetrics.length > 0
         ? (recentErrors.length / recentMetrics.length) * 100
         : 0;
-    res.json({
+    return res.json({
         status: 'OK',
         timestamp: now.toISOString(),
         metrics: {
@@ -152,7 +152,7 @@ function getHealthWithMetrics(_req, res) {
 }
 function getMemoryUsage(_req, res) {
     const usage = process.memoryUsage();
-    res.json({
+    return res.json({
         rss: Math.round(usage.rss / 1024 / 1024 * 100) / 100,
         heapTotal: Math.round(usage.heapTotal / 1024 / 1024 * 100) / 100,
         heapUsed: Math.round(usage.heapUsed / 1024 / 1024 * 100) / 100,

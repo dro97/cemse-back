@@ -6,7 +6,7 @@ export async function listDiscussions(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getDiscussion(req: Request, res: Response) {
+export async function getDiscussion(req: Request, res: Response): Promise<Response> {
   const item = await prisma.discussion.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,7 +14,7 @@ export async function getDiscussion(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createDiscussion(req: Request, res: Response) {
+export async function createDiscussion(req: Request, res: Response): Promise<Response> {
   const { lessonId, userId, content, parentId } = req.body;
   
   if (!lessonId || !userId || !content) {
@@ -33,7 +33,7 @@ export async function createDiscussion(req: Request, res: Response) {
   return res.status(201).json(newItem);
 }
 
-export async function updateDiscussion(req: Request, res: Response) {
+export async function updateDiscussion(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.discussion.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -41,7 +41,7 @@ export async function updateDiscussion(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteDiscussion(req: Request, res: Response) {
+export async function deleteDiscussion(req: Request, res: Response): Promise<Response> {
   await prisma.discussion.delete({
     where: { id: req.params['id'] || '' }
   });

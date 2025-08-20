@@ -14,8 +14,8 @@ async function listCompanies(req, res) {
     try {
         const user = req.user;
         let whereClause = { isActive: true };
-        if (user && user.type === 'municipality') {
-            whereClause.municipalityId = user.id;
+        if (user && user.type === 'institution') {
+            whereClause.institutionId = user.id;
         }
         if (user && user.type === 'company') {
             whereClause.id = user.id;
@@ -49,7 +49,7 @@ async function listCompanies(req, res) {
 async function searchCompanies(req, res) {
     try {
         const user = req.user;
-        const { query, businessSector, companySize, municipalityId, department, foundedYear, isActive, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = req.query;
+        const { query, businessSector, companySize, institutionId, department, foundedYear, isActive, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = req.query;
         let whereClause = {};
         if (user && user.type === 'municipality') {
             whereClause.municipalityId = user.id;
@@ -74,8 +74,8 @@ async function searchCompanies(req, res) {
         if (companySize) {
             whereClause.companySize = companySize;
         }
-        if (municipalityId) {
-            whereClause.municipalityId = municipalityId;
+        if (institutionId) {
+            whereClause.municipalityId = institutionId;
         }
         if (foundedYear) {
             whereClause.foundedYear = parseInt(foundedYear);
@@ -138,7 +138,7 @@ async function searchCompanies(req, res) {
                     query,
                     businessSector,
                     companySize,
-                    municipalityId,
+                    institutionId,
                     department,
                     foundedYear,
                     isActive
@@ -216,7 +216,7 @@ async function getCompany(req, res) {
             return res.status(400).json({ message: "Missing company ID" });
         }
         const company = await prisma_1.prisma.company.findUnique({
-            where: { id },
+            where: { id: id || '' },
             include: {
                 municipality: {
                     select: {
@@ -315,6 +315,7 @@ async function createCompany(req, res) {
                 debug: { email, loginEmail, finalLoginEmail }
             });
         }
+        let finalCompanySize = companySize;
         if (companySize) {
             const validCompanySizes = ['MICRO', 'SMALL', 'MEDIUM', 'LARGE'];
             const normalizedCompanySize = companySize.toUpperCase();
@@ -324,7 +325,7 @@ async function createCompany(req, res) {
                     debug: { providedCompanySize: companySize, normalizedCompanySize }
                 });
             }
-            req.body.companySize = normalizedCompanySize;
+            finalCompanySize = normalizedCompanySize;
         }
         const municipality = await prisma_1.prisma.municipality.findUnique({
             where: { id: finalMunicipalityId }
@@ -345,20 +346,20 @@ async function createCompany(req, res) {
         const hashedPassword = await bcrypt.hash(password, 10);
         let createdBy = user.id;
         if (isMunicipality) {
-            let municipalityUser = await prisma_1.prisma.user.findFirst({
+            let institutionUser = await prisma_1.prisma.user.findFirst({
                 where: { username: user.username }
             });
-            if (!municipalityUser) {
-                municipalityUser = await prisma_1.prisma.user.create({
+            if (!institutionUser) {
+                institutionUser = await prisma_1.prisma.user.create({
                     data: {
                         username: user.username,
-                        password: 'municipality_user',
+                        password: 'institution_user',
                         role: client_1.UserRole.MUNICIPAL_GOVERNMENTS,
                         isActive: true
                     }
                 });
             }
-            createdBy = municipalityUser.id;
+            createdBy = institutionUser.id;
         }
         const company = await prisma_1.prisma.company.create({
             data: {
@@ -367,7 +368,7 @@ async function createCompany(req, res) {
                 taxId,
                 legalRepresentative,
                 businessSector,
-                companySize,
+                companySize: finalCompanySize,
                 website,
                 email,
                 phone,
@@ -433,7 +434,7 @@ async function updateCompany(req, res) {
         }
         const { name, description, taxId, legalRepresentative, businessSector, companySize, website, email, phone, address, foundedYear, municipalityId, isActive } = req.body;
         const company = await prisma_1.prisma.company.update({
-            where: { id },
+            where: { id: id || '' },
             data: {
                 name,
                 description,
@@ -496,7 +497,7 @@ async function deleteCompany(req, res) {
             return res.status(400).json({ message: "Missing company ID" });
         }
         const company = await prisma_1.prisma.company.findUnique({
-            where: { id },
+            where: { id: id || '' },
             include: {
                 jobOffers: {
                     where: { isActive: true }

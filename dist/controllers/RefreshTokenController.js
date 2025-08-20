@@ -33,7 +33,7 @@ async function updateRefreshToken(req, res) {
     if (!id)
         return res.status(400).json({ error: "Missing id" });
     try {
-        const updated = await prisma_1.prisma.refreshToken.update({ where: { id }, data: req.body });
+        const updated = await prisma_1.prisma.refreshToken.update({ where: { id: id || '' }, data: req.body });
         return res.json(updated);
     }
     catch (e) {

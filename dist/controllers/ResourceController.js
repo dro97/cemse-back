@@ -49,7 +49,7 @@ async function updateResource(req, res) {
         return res.status(400).json({ message: "Missing id" });
     const data = req.body;
     try {
-        const item = await prisma_1.prisma.resource.update({ where: { id }, data });
+        const item = await prisma_1.prisma.resource.update({ where: { id: id || '' }, data });
         return res.json(item);
     }
     catch {

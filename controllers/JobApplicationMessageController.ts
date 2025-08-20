@@ -76,7 +76,7 @@ import { SenderType, MessageType, MessageStatus } from "@prisma/client";
  *       404:
  *         description: Application not found
  */
-export async function getMessages(req: Request, res: Response) {
+export async function getMessages(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { applicationId } = req.params;
@@ -88,7 +88,7 @@ export async function getMessages(req: Request, res: Response) {
 
     // Verify application exists and user has access
     const application = await prisma.jobApplication.findUnique({
-      where: { id: applicationId },
+      where: { id: applicationId || '' },
       include: {
         applicant: {
           select: { userId: true }
@@ -104,8 +104,8 @@ export async function getMessages(req: Request, res: Response) {
     }
 
     // Check if user has access to this application
-    const isApplicant = user.type === 'user' && application.applicant.userId === user.id;
-    const isCompany = user.type === 'company' && application.jobOffer.companyId === user.id;
+    const isApplicant = user.type === 'user' && (application as any).applicant.userId === user.id;
+    const isCompany = user.type === 'company' && (application as any).jobOffer.companyId === user.id;
     const isSuperAdmin = user.role === 'SUPERADMIN';
 
     if (!isApplicant && !isCompany && !isSuperAdmin) {
@@ -117,7 +117,7 @@ export async function getMessages(req: Request, res: Response) {
     
     const [messages, total] = await Promise.all([
       prisma.jobApplicationMessage.findMany({
-        where: { applicationId },
+        where: { applicationId: applicationId || '' },
         orderBy: { createdAt: 'asc' },
         skip,
         take: Number(limit),
@@ -147,7 +147,7 @@ export async function getMessages(req: Request, res: Response) {
         }
       }),
       prisma.jobApplicationMessage.count({
-        where: { applicationId }
+        where: { applicationId: applicationId || '' }
       })
     ]);
 
@@ -210,7 +210,7 @@ export async function getMessages(req: Request, res: Response) {
  *       404:
  *         description: Application not found
  */
-export async function sendMessage(req: Request, res: Response) {
+export async function sendMessage(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { applicationId } = req.params;
@@ -226,7 +226,7 @@ export async function sendMessage(req: Request, res: Response) {
 
     // Verify application exists and user has access
     const application = await prisma.jobApplication.findUnique({
-      where: { id: applicationId },
+      where: { id: applicationId || '' },
       include: {
         applicant: {
           select: { userId: true }
@@ -242,8 +242,8 @@ export async function sendMessage(req: Request, res: Response) {
     }
 
     // Check if user has access to this application
-    const isApplicant = user.type === 'user' && application.applicant.userId === user.id;
-    const isCompany = user.type === 'company' && application.jobOffer.companyId === user.id;
+    const isApplicant = user.type === 'user' && (application as any).applicant.userId === user.id;
+    const isCompany = user.type === 'company' && (application as any).jobOffer.companyId === user.id;
     const isSuperAdmin = user.role === 'SUPERADMIN';
 
     if (!isApplicant && !isCompany && !isSuperAdmin) {
@@ -256,7 +256,7 @@ export async function sendMessage(req: Request, res: Response) {
     // Create message
     const message = await prisma.jobApplicationMessage.create({
       data: {
-        applicationId,
+        applicationId: applicationId || '',
         senderId: user.id,
         senderType,
         content: content.trim(),
@@ -337,7 +337,7 @@ export async function sendMessage(req: Request, res: Response) {
  *       404:
  *         description: Message not found
  */
-export async function markMessageAsRead(req: Request, res: Response) {
+export async function markMessageAsRead(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { applicationId, messageId } = req.params;
@@ -349,8 +349,8 @@ export async function markMessageAsRead(req: Request, res: Response) {
     // Verify message exists and user has access
     const message = await prisma.jobApplicationMessage.findFirst({
       where: { 
-        id: messageId,
-        applicationId 
+        id: messageId || '',
+        applicationId: applicationId || ''
       },
       include: {
         application: {
@@ -371,8 +371,8 @@ export async function markMessageAsRead(req: Request, res: Response) {
     }
 
     // Check if user has access to this application
-    const isApplicant = user.type === 'user' && message.application.applicant.userId === user.id;
-    const isCompany = user.type === 'company' && message.application.jobOffer.companyId === user.id;
+    const isApplicant = user.type === 'user' && message.application?.applicant?.userId === user.id;
+    const isCompany = user.type === 'company' && message.application?.jobOffer?.companyId === user.id;
     const isSuperAdmin = user.role === 'SUPERADMIN';
 
     if (!isApplicant && !isCompany && !isSuperAdmin) {
@@ -389,7 +389,7 @@ export async function markMessageAsRead(req: Request, res: Response) {
 
     // Update message status
     const updatedMessage = await prisma.jobApplicationMessage.update({
-      where: { id: messageId },
+      where: { id: messageId || '' },
       data: { 
         status: MessageStatus.READ,
         readAt: new Date()
@@ -421,7 +421,7 @@ export async function markMessageAsRead(req: Request, res: Response) {
  *       401:
  *         description: Unauthorized
  */
-export async function getUnreadCount(req: Request, res: Response) {
+export async function getUnreadCount(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
 

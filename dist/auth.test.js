@@ -59,7 +59,7 @@ describe('Auth/User CRUD (SUPER_ADMIN)', () => {
             .send({ password: 'newpass456', role: 'EMPRESAS', isActive: false });
         expect(res.status).toBe(200);
         expect(res.body.role).toBe('EMPRESAS');
-        expect(res.body.isActive).toBe(false);
+        expect(res.body.active).toBe(false);
     });
     it('should delete the user', async () => {
         const res = await (0, supertest_1.default)(server_1.app)

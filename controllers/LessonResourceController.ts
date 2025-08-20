@@ -1,6 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
-import { uploadSingleFile } from "../middleware/upload";
+// import { uploadSingleFile } from "../middleware/upload";
 
 /**
  * @swagger
@@ -63,7 +63,7 @@ import { uploadSingleFile } from "../middleware/upload";
  *       200:
  *         description: List of lesson resources
  */
-export async function listLessonResources(req: Request, res: Response) {
+export async function listLessonResources(req: Request, res: Response): Promise<Response> {
   try {
     const { lessonId, type } = req.query;
     
@@ -135,12 +135,12 @@ export async function listLessonResources(req: Request, res: Response) {
  *       404:
  *         description: Lesson resource not found
  */
-export async function getLessonResource(req: Request, res: Response) {
+export async function getLessonResource(req: Request, res: Response): Promise<Response> {
   try {
     const { id } = req.params;
     
     const resource = await prisma.lessonResource.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         lesson: {
           select: {
@@ -211,7 +211,7 @@ export async function getLessonResource(req: Request, res: Response) {
  *       201:
  *         description: Lesson resource created successfully
  */
-export async function createLessonResource(req: Request, res: Response) {
+export async function createLessonResource(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -227,7 +227,7 @@ export async function createLessonResource(req: Request, res: Response) {
     // Debug: Log the request body and files
     console.log('🔍 [DEBUG] req.body:', req.body);
     console.log('📁 [DEBUG] req.files:', req.files);
-    console.log('📋 [DEBUG] req.uploadedResource:', req.uploadedResource);
+    console.log('📋 [DEBUG] (req as any).uploadedResource:', (req as any).uploadedResource);
     
     const { lessonId, title, description, type, orderIndex, isDownloadable } = req.body || {};
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } || {};
@@ -255,11 +255,11 @@ export async function createLessonResource(req: Request, res: Response) {
     let fileSize = 0;
     
     // Handle file upload from MinIO if provided
-    if (req.uploadedResource) {
-      console.log('🎥 [DEBUG] Procesando req.uploadedResource');
-      fileUrl = req.uploadedResource.url;
-      filePath = req.uploadedResource.filename; // Store filename instead of path for MinIO
-      fileSize = req.uploadedResource.size;
+    if ((req as any).uploadedResource) {
+      console.log('🎥 [DEBUG] Procesando (req as any).uploadedResource');
+      fileUrl = (req as any).uploadedResource.url;
+      filePath = (req as any).uploadedResource.filename; // Store filename instead of path for MinIO
+      fileSize = (req as any).uploadedResource.size;
       console.log('🎥 [DEBUG] Resource URL desde uploadedResource:', fileUrl);
     } else if (files['file'] && files['file'][0]) {
       // Fallback to local file if MinIO upload failed
@@ -267,7 +267,7 @@ export async function createLessonResource(req: Request, res: Response) {
       const file = files['file'][0];
       fileUrl = `/uploads/resources/${file.filename}`;
       filePath = file.path;
-      fileSize = file.size;
+      fileSize = file?.size;
     }
     
     // For external links, use the URL directly
@@ -311,12 +311,12 @@ export async function createLessonResource(req: Request, res: Response) {
     
     return res.status(201).json({
       ...resource,
-      uploadedFile: req.uploadedResource ? {
-        url: req.uploadedResource.url,
-        filename: req.uploadedResource.filename,
-        originalName: req.uploadedResource.originalName,
-        size: req.uploadedResource.size,
-        mimetype: req.uploadedResource.mimetype
+      uploadedFile: (req as any).uploadedResource ? {
+        url: (req as any).uploadedResource.url,
+        filename: (req as any).uploadedResource.filename,
+        originalName: (req as any).uploadedResource.originalName,
+        size: (req as any).uploadedResource.size,
+        mimetype: (req as any).uploadedResource.mimetype
       } : undefined
     });
   } catch (error: any) {
@@ -368,7 +368,7 @@ export async function createLessonResource(req: Request, res: Response) {
  *       404:
  *         description: Lesson resource not found
  */
-export async function updateLessonResource(req: Request, res: Response) {
+export async function updateLessonResource(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -384,7 +384,7 @@ export async function updateLessonResource(req: Request, res: Response) {
     
     // Check if resource exists
     const existingResource = await prisma.lessonResource.findUnique({
-      where: { id }
+      where: { id: id || '' }
     });
     
     if (!existingResource) {
@@ -403,22 +403,22 @@ export async function updateLessonResource(req: Request, res: Response) {
     if (isDownloadable !== undefined) updateData.isDownloadable = isDownloadable === 'true' || isDownloadable === true;
     
     // Handle file upload from MinIO if provided
-    if (req.uploadedResource) {
+    if ((req as any).uploadedResource) {
       console.log('🎥 [DEBUG] Procesando actualización con MinIO');
-      updateData.url = req.uploadedResource.url;
-      updateData.filePath = req.uploadedResource.filename; // Store filename instead of path for MinIO
-      updateData.fileSize = req.uploadedResource.size;
+      updateData.url = (req as any).uploadedResource.url;
+      updateData.filePath = (req as any).uploadedResource.filename; // Store filename instead of path for MinIO
+      updateData.fileSize = (req as any).uploadedResource.size;
     } else if (files['file'] && files['file'][0]) {
       // Fallback to local file if MinIO upload failed
       console.log('⚠️ [DEBUG] Fallback a archivo local para actualización');
       const file = files['file'][0];
       updateData.url = `/uploads/resources/${file.filename}`;
       updateData.filePath = file.path;
-      updateData.fileSize = file.size;
+      updateData.fileSize = file?.size;
     }
     
     const resource = await prisma.lessonResource.update({
-      where: { id },
+      where: { id: id || '' },
       data: updateData,
       include: {
         lesson: {
@@ -444,12 +444,12 @@ export async function updateLessonResource(req: Request, res: Response) {
     
     return res.json({
       ...resource,
-      uploadedFile: req.uploadedResource ? {
-        url: req.uploadedResource.url,
-        filename: req.uploadedResource.filename,
-        originalName: req.uploadedResource.originalName,
-        size: req.uploadedResource.size,
-        mimetype: req.uploadedResource.mimetype
+      uploadedFile: (req as any).uploadedResource ? {
+        url: (req as any).uploadedResource.url,
+        filename: (req as any).uploadedResource.filename,
+        originalName: (req as any).uploadedResource.originalName,
+        size: (req as any).uploadedResource.size,
+        mimetype: (req as any).uploadedResource.mimetype
       } : undefined
     });
   } catch (error: any) {
@@ -481,7 +481,7 @@ export async function updateLessonResource(req: Request, res: Response) {
  *       404:
  *         description: Lesson resource not found
  */
-export async function deleteLessonResource(req: Request, res: Response) {
+export async function deleteLessonResource(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -497,7 +497,7 @@ export async function deleteLessonResource(req: Request, res: Response) {
     
     // Check if resource exists
     const resource = await prisma.lessonResource.findUnique({
-      where: { id }
+      where: { id: id || '' }
     });
     
     if (!resource) {
@@ -523,7 +523,7 @@ export async function deleteLessonResource(req: Request, res: Response) {
     }
     
     await prisma.lessonResource.delete({
-      where: { id }
+      where: { id: id || '' }
     });
     
     return res.json({ message: "Lesson resource deleted successfully" });

@@ -39,13 +39,13 @@ router.get("/videos/:filename", serveVideo);
 
 // Serve documents (PDFs)
 router.get("/documents/:filename", (req, res) => {
-  req.query.type = 'documents';
+  (req.query as any).type = 'documents';
   serveDocument(req, res);
 });
 
 // Serve cover letters (PDFs)
 router.get("/cover-letters/:filename", (req, res) => {
-  req.query.type = 'cover-letters';
+  (req.query as any).type = 'cover-letters';
   serveDocument(req, res);
 });
 

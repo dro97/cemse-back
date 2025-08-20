@@ -1,11 +1,20 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listJobApplications = listJobApplications;
 exports.getJobApplication = getJobApplication;
 exports.createJobApplication = createJobApplication;
 exports.updateJobApplication = updateJobApplication;
+exports.getApplicationsByJobOffer = getApplicationsByJobOffer;
+exports.testAuth = testAuth;
 exports.deleteJobApplication = deleteJobApplication;
+exports.checkApplicationStatus = checkApplicationStatus;
+exports.updateApplicationStatus = updateApplicationStatus;
 const prisma_1 = require("../lib/prisma");
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 async function listJobApplications(req, res) {
     try {
         const user = req.user;
@@ -27,7 +36,10 @@ async function listJobApplications(req, res) {
                             select: {
                                 id: true,
                                 name: true,
-                                email: true
+                                email: true,
+                                phone: true,
+                                website: true,
+                                address: true
                             }
                         }
                     }
@@ -37,7 +49,9 @@ async function listJobApplications(req, res) {
                         id: true,
                         firstName: true,
                         lastName: true,
-                        email: true
+                        email: true,
+                        phone: true,
+                        avatarUrl: true
                     }
                 }
             },
@@ -45,7 +59,10 @@ async function listJobApplications(req, res) {
                 appliedAt: 'desc'
             }
         });
-        return res.json(items);
+        return res.json({
+            items,
+            total: items.length
+        });
     }
     catch (error) {
         console.error("Error listing job applications:", error);
@@ -82,6 +99,11 @@ async function getJobApplication(req, res) {
                         phone: true,
                         address: true
                     }
+                },
+                questionAnswers: {
+                    include: {
+                        question: true
+                    }
                 }
             }
         });
@@ -101,15 +123,46 @@ async function getJobApplication(req, res) {
 async function createJobApplication(req, res) {
     try {
         const user = req.user;
+        console.log("Job application attempt:", {
+            user: user ? { id: user.id, type: user.type, role: user.role } : null,
+            headers: req.headers.authorization ? "Bearer token present" : "No Bearer token"
+        });
         if (!user) {
             return res.status(401).json({ message: "Authentication required" });
         }
         if (user.type !== 'user') {
+            console.log("User type check failed:", { userType: user.type, userId: user.id, userRole: user.role });
             return res.status(403).json({
-                message: "Only regular users can create job applications"
+                message: "Only regular users can create job applications",
+                debug: { userType: user.type, userRole: user.role }
             });
         }
-        const { jobOfferId, coverLetter, cvData, profileImage } = req.body;
+        const { jobOfferId, coverLetter, cvUrl, coverLetterUrl, message, questionAnswers, status } = req.body;
+        let applicationStatus = 'SENT';
+        if (status) {
+            switch (status.toUpperCase()) {
+                case 'PENDING':
+                case 'SENT':
+                    applicationStatus = 'SENT';
+                    break;
+                case 'UNDER_REVIEW':
+                    applicationStatus = 'UNDER_REVIEW';
+                    break;
+                case 'PRE_SELECTED':
+                    applicationStatus = 'PRE_SELECTED';
+                    break;
+                case 'REJECTED':
+                    applicationStatus = 'REJECTED';
+                    break;
+                case 'HIRED':
+                    applicationStatus = 'HIRED';
+                    break;
+                default:
+                    applicationStatus = 'SENT';
+            }
+        }
+        const cvFile = req.files?.cvFile?.[0];
+        const coverLetterFile = req.files?.coverLetterFile?.[0];
         if (!jobOfferId) {
             return res.status(400).json({ message: "Job offer ID is required" });
         }
@@ -133,14 +186,42 @@ async function createJobApplication(req, res) {
         if (existingApplication) {
             return res.status(400).json({ message: "You have already applied to this job offer" });
         }
+        let finalCvUrl = null;
+        let finalCoverLetterUrl = null;
+        if (cvFile) {
+            const uploadDir = path_1.default.join(__dirname, '../uploads/cv');
+            if (!fs_1.default.existsSync(uploadDir)) {
+                fs_1.default.mkdirSync(uploadDir, { recursive: true });
+            }
+            const fileName = `cv_${user.id}_${Date.now()}${path_1.default.extname(cvFile.originalname)}`;
+            const filePath = path_1.default.join(uploadDir, fileName);
+            fs_1.default.writeFileSync(filePath, cvFile.buffer);
+            finalCvUrl = `/uploads/cv/${fileName}`;
+        }
+        else if (cvUrl) {
+            finalCvUrl = cvUrl;
+        }
+        if (coverLetterFile) {
+            const uploadDir = path_1.default.join(__dirname, '../uploads/cover-letters');
+            if (!fs_1.default.existsSync(uploadDir)) {
+                fs_1.default.mkdirSync(uploadDir, { recursive: true });
+            }
+            const fileName = `cover_${user.id}_${Date.now()}${path_1.default.extname(coverLetterFile.originalname)}`;
+            const filePath = path_1.default.join(uploadDir, fileName);
+            fs_1.default.writeFileSync(filePath, coverLetterFile.buffer);
+            finalCoverLetterUrl = `/uploads/cover-letters/${fileName}`;
+        }
+        else if (coverLetterUrl) {
+            finalCoverLetterUrl = coverLetterUrl;
+        }
         const item = await prisma_1.prisma.jobApplication.create({
             data: {
                 applicantId: user.id,
                 jobOfferId: jobOfferId,
-                coverLetter: coverLetter || null,
-                cvData: cvData || null,
-                profileImage: profileImage || null,
-                status: 'SENT'
+                coverLetter: message || coverLetter || null,
+                cvFile: finalCvUrl,
+                coverLetterFile: finalCoverLetterUrl,
+                status: applicationStatus
             },
             include: {
                 jobOffer: {
@@ -164,6 +245,16 @@ async function createJobApplication(req, res) {
                 }
             }
         });
+        if (questionAnswers && Array.isArray(questionAnswers) && questionAnswers.length > 0) {
+            const questionAnswerData = questionAnswers.map((qa) => ({
+                applicationId: item.id,
+                questionId: qa.questionId,
+                answer: qa.answer
+            }));
+            await prisma_1.prisma.jobQuestionAnswer.createMany({
+                data: questionAnswerData
+            });
+        }
         await prisma_1.prisma.jobOffer.update({
             where: { id: jobOfferId },
             data: {
@@ -258,6 +349,80 @@ async function updateJobApplication(req, res) {
         });
     }
 }
+async function getApplicationsByJobOffer(req, res) {
+    try {
+        const user = req.user;
+        const { jobOfferId } = req.query;
+        if (!jobOfferId) {
+            return res.status(400).json({ message: "Job offer ID is required" });
+        }
+        let whereClause = {
+            jobOfferId: jobOfferId
+        };
+        if (user && user.type === 'company') {
+            whereClause.jobOffer = {
+                companyId: user.id
+            };
+        }
+        if (user && user.type === 'user') {
+            whereClause.applicantId = user.id;
+        }
+        const items = await prisma_1.prisma.jobApplication.findMany({
+            where: whereClause,
+            include: {
+                jobOffer: {
+                    include: {
+                        company: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                applicant: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: {
+                appliedAt: 'desc'
+            }
+        });
+        return res.json(items);
+    }
+    catch (error) {
+        console.error("Error getting applications by job offer:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+async function testAuth(req, res) {
+    try {
+        const user = req.user;
+        return res.json({
+            message: "Authentication test successful",
+            user: user ? {
+                id: user.id,
+                type: user.type,
+                role: user.role,
+                username: user.username
+            } : null,
+            canCreateApplication: user && user.type === 'user'
+        });
+    }
+    catch (error) {
+        console.error("Auth test error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
 async function deleteJobApplication(req, res) {
     try {
         const user = req.user;
@@ -298,6 +463,164 @@ async function deleteJobApplication(req, res) {
             message: "Internal server error",
             error: error.message
         });
+    }
+}
+async function checkApplicationStatus(req, res) {
+    try {
+        const user = req.user;
+        const { jobOfferId } = req.params;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        if (user.type !== 'user') {
+            return res.status(403).json({ message: "Only users can check application status" });
+        }
+        const jobOffer = await prisma_1.prisma.jobOffer.findUnique({
+            where: { id: jobOfferId }
+        });
+        if (!jobOffer) {
+            return res.status(404).json({ message: "Job offer not found" });
+        }
+        const application = await prisma_1.prisma.jobApplication.findFirst({
+            where: {
+                applicantId: user.id,
+                jobOfferId: jobOfferId
+            },
+            select: {
+                id: true,
+                status: true,
+                appliedAt: true,
+                reviewedAt: true,
+                notes: true,
+                rating: true
+            }
+        });
+        return res.json({
+            hasApplied: !!application,
+            application: application
+        });
+    }
+    catch (error) {
+        console.error("Error checking application status:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+async function updateApplicationStatus(req, res) {
+    try {
+        const user = req.user;
+        const { id } = req.params;
+        const { status, decisionReason, rating } = req.body;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        if (!status || !decisionReason) {
+            return res.status(400).json({
+                message: "Status and decision reason are required"
+            });
+        }
+        const validStatuses = ['UNDER_REVIEW', 'PRE_SELECTED', 'REJECTED', 'HIRED'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                message: "Invalid status. Must be one of: " + validStatuses.join(', ')
+            });
+        }
+        if (rating !== undefined && (rating < 1 || rating > 5)) {
+            return res.status(400).json({
+                message: "Rating must be between 1 and 5"
+            });
+        }
+        const application = await prisma_1.prisma.jobApplication.findUnique({
+            where: { id: id },
+            include: {
+                jobOffer: {
+                    include: {
+                        company: true
+                    }
+                },
+                applicant: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!application) {
+            return res.status(404).json({ message: "Job application not found" });
+        }
+        if (user.type !== 'company' || application.jobOffer.companyId !== user.id) {
+            return res.status(403).json({ message: "Access denied. Only company owners can update application status" });
+        }
+        const updatedApplication = await prisma_1.prisma.jobApplication.update({
+            where: { id: id },
+            data: {
+                status: status,
+                decisionReason: decisionReason,
+                rating: rating || null,
+                reviewedAt: new Date()
+            },
+            include: {
+                jobOffer: {
+                    include: {
+                        company: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                applicant: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true
+                    }
+                }
+            }
+        });
+        await prisma_1.prisma.jobApplicationMessage.create({
+            data: {
+                applicationId: id,
+                senderId: user.id,
+                senderType: 'COMPANY',
+                content: `Tu aplicación ha sido ${getStatusMessage(status)}. Motivo: ${decisionReason}`,
+                messageType: 'TEXT',
+                status: 'SENT'
+            }
+        });
+        return res.json({
+            message: "Application status updated successfully",
+            application: updatedApplication
+        });
+    }
+    catch (error) {
+        console.error("Error updating application status:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+function getStatusMessage(status) {
+    switch (status) {
+        case 'UNDER_REVIEW':
+            return 'puesta en revisión';
+        case 'PRE_SELECTED':
+            return 'preseleccionada';
+        case 'REJECTED':
+            return 'rechazada';
+        case 'HIRED':
+            return 'aceptada';
+        default:
+            return 'actualizada';
     }
 }
 //# sourceMappingURL=JobApplicationController.js.map

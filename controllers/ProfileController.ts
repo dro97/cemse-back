@@ -181,7 +181,7 @@ import { UserRole } from "@prisma/client";
  */
 export async function listProfiles(_: Request, res: Response) {
   const items = await prisma.profile.findMany();
-  res.json(items);
+  return res.json(items);
 }
 
 /**
@@ -207,7 +207,7 @@ export async function listProfiles(_: Request, res: Response) {
  *       404:
  *         description: Profile not found
  */
-export async function getMyProfile(req: Request, res: Response) {
+export async function getMyProfile(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -233,10 +233,10 @@ export async function getMyProfile(req: Request, res: Response) {
   }
 }
 
-export async function getProfile(req: Request, res: Response) {
+export async function getProfile(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
-    const profileId = req.params["id"];
+    const profileId = req.params['id'];
     
     if (!user) {
       return res.status(401).json({ message: "Authentication required" });
@@ -287,7 +287,7 @@ export async function getProfile(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createProfile(req: Request, res: Response) {
+export async function createProfile(req: Request, res: Response): Promise<Response> {
   const newItem = await prisma.profile.create({
     data: req.body
   });
@@ -295,7 +295,7 @@ export async function createProfile(req: Request, res: Response) {
   // Emit real-time update
   io.emit("profile:created", newItem);
   
-  res.status(201).json(newItem);
+  return res.status(201).json(newItem);
 }
 
 /**
@@ -327,9 +327,9 @@ export async function createProfile(req: Request, res: Response) {
  *       404:
  *         description: Profile not found
  */
-export async function updateProfile(req: Request, res: Response) {
+export async function updateProfile(req: Request, res: Response): Promise<Response> {
   try {
-    const profileId = req.params["id"] || "";
+    const profileId = req.params['id'] || "";
     const user = (req as any).user;
     
     if (!user) {
@@ -396,15 +396,15 @@ export async function updateProfile(req: Request, res: Response) {
  *       404:
  *         description: Profile not found
  */
-export async function deleteProfile(req: Request, res: Response) {
+export async function deleteProfile(req: Request, res: Response): Promise<Response> {
   await prisma.profile.delete({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   
   // Emit real-time update
-  io.emit("profile:deleted", { id: req.params["id"] });
+  io.emit("profile:deleted", { id: req.params['id'] });
   
-  res.status(204).end();
+  return res.status(204).end();
 }
 
 /**
@@ -445,9 +445,9 @@ export async function deleteProfile(req: Request, res: Response) {
  *       404:
  *         description: Profile not found
  */
-export async function updateProfileAvatar(req: Request, res: Response) {
+export async function updateProfileAvatar(req: Request, res: Response): Promise<Response> {
   try {
-    const profileId = req.params["id"] || "";
+    const profileId = req.params['id'] || "";
     const user = (req as any).user;
     
     if (!user) {
@@ -524,7 +524,7 @@ export async function updateProfileAvatar(req: Request, res: Response) {
  *       404:
  *         description: Perfil no encontrado o no es joven/adolescente
  */
-export async function getExternalProfile(req: Request, res: Response) {
+export async function getExternalProfile(req: Request, res: Response): Promise<Response> {
   const apiKey = req.headers["x-api-key"] as string | undefined;
   if (!apiKey) {
     return res.status(401).json({ message: "API Key requerida" });

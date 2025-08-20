@@ -6,7 +6,7 @@ export async function listQuizAttempts(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getQuizAttempt(req: Request, res: Response) {
+export async function getQuizAttempt(req: Request, res: Response): Promise<Response> {
   const item = await prisma.quizAttempt.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,14 +14,14 @@ export async function getQuizAttempt(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createQuizAttempt(req: Request, res: Response) {
+export async function createQuizAttempt(req: Request, res: Response): Promise<Response> {
   const newItem = await prisma.quizAttempt.create({
     data: req.body
   });
   return res.status(201).json(newItem);
 }
 
-export async function updateQuizAttempt(req: Request, res: Response) {
+export async function updateQuizAttempt(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.quizAttempt.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -29,7 +29,7 @@ export async function updateQuizAttempt(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteQuizAttempt(req: Request, res: Response) {
+export async function deleteQuizAttempt(req: Request, res: Response): Promise<Response> {
   await prisma.quizAttempt.delete({
     where: { id: req.params['id'] || '' }
   });
@@ -37,7 +37,7 @@ export async function deleteQuizAttempt(req: Request, res: Response) {
 }
 
 // Endpoint para completar un quiz
-export async function completeQuiz(req: Request, res: Response) {
+export async function completeQuiz(req: Request, res: Response): Promise<Response> {
   try {
     const { quizId, enrollmentId, answers } = req.body;
     const studentId = (req as any).user?.id;

@@ -5,6 +5,7 @@ exports.getMunicipality = getMunicipality;
 exports.createMunicipality = createMunicipality;
 exports.updateMunicipality = updateMunicipality;
 exports.deleteMunicipality = deleteMunicipality;
+exports.listPublicMunicipalities = listPublicMunicipalities;
 const prisma_1 = require("../lib/prisma");
 const client_1 = require("@prisma/client");
 async function listMunicipalities(_req, res) {
@@ -26,6 +27,10 @@ async function listMunicipalities(_req, res) {
                 username: true,
                 email: true,
                 phone: true,
+                institutionType: true,
+                customType: true,
+                primaryColor: true,
+                secondaryColor: true,
                 createdAt: true,
                 updatedAt: true,
                 creator: {
@@ -51,7 +56,7 @@ async function getMunicipality(req, res) {
             return res.status(400).json({ message: "Missing municipality ID" });
         }
         const municipality = await prisma_1.prisma.municipality.findUnique({
-            where: { id },
+            where: { id: id || '' },
             select: {
                 id: true,
                 name: true,
@@ -67,6 +72,10 @@ async function getMunicipality(req, res) {
                 username: true,
                 email: true,
                 phone: true,
+                institutionType: true,
+                customType: true,
+                primaryColor: true,
+                secondaryColor: true,
                 createdAt: true,
                 updatedAt: true,
                 creator: {
@@ -102,10 +111,20 @@ async function createMunicipality(req, res) {
         if (!user || user.role !== client_1.UserRole.SUPERADMIN) {
             return res.status(403).json({ message: "Only SuperAdmin can create municipalities" });
         }
-        const { name, department, region, population, mayorName, mayorEmail, mayorPhone, address, website, username, password, email, phone } = req.body;
-        if (!name || !department || !username || !password || !email) {
+        const { name, department, region, population, mayorName, mayorEmail, mayorPhone, address, website, username, password, email, phone, institutionType, customType, primaryColor, secondaryColor } = req.body;
+        if (!name || !department || !username || !password || !email || !institutionType) {
             return res.status(400).json({
-                message: "Name, department, username, password, and email are required"
+                message: "Name, department, username, password, email, and institutionType are required"
+            });
+        }
+        if (!['MUNICIPALITY', 'NGO', 'FOUNDATION', 'OTHER'].includes(institutionType)) {
+            return res.status(400).json({
+                message: "institutionType must be MUNICIPALITY, NGO, FOUNDATION, or OTHER"
+            });
+        }
+        if (institutionType === 'OTHER' && !customType) {
+            return res.status(400).json({
+                message: "customType is required when institutionType is OTHER"
             });
         }
         const bcrypt = require('bcrypt');
@@ -125,6 +144,10 @@ async function createMunicipality(req, res) {
                 password: hashedPassword,
                 email,
                 phone,
+                institutionType,
+                customType: institutionType === 'OTHER' ? customType : null,
+                primaryColor,
+                secondaryColor,
                 createdBy: user.id,
                 isActive: true
             },
@@ -161,7 +184,7 @@ async function updateMunicipality(req, res) {
         }
         const { name, department, region, population, mayorName, mayorEmail, mayorPhone, address, website, isActive } = req.body;
         const municipality = await prisma_1.prisma.municipality.update({
-            where: { id },
+            where: { id: id || '' },
             data: {
                 name,
                 department,
@@ -208,7 +231,7 @@ async function deleteMunicipality(req, res) {
             return res.status(400).json({ message: "Missing municipality ID" });
         }
         const municipality = await prisma_1.prisma.municipality.findUnique({
-            where: { id },
+            where: { id: id || '' },
             include: {
                 companies: {
                     where: { isActive: true }
@@ -233,6 +256,29 @@ async function deleteMunicipality(req, res) {
         if (error.code === 'P2025') {
             return res.status(404).json({ message: "Municipality not found" });
         }
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+async function listPublicMunicipalities(_req, res) {
+    try {
+        const municipalities = await prisma_1.prisma.municipality.findMany({
+            where: { isActive: true },
+            select: {
+                id: true,
+                name: true,
+                department: true,
+                region: true,
+                population: true
+            },
+            orderBy: [
+                { department: 'asc' },
+                { name: 'asc' }
+            ]
+        });
+        return res.json(municipalities);
+    }
+    catch (error) {
+        console.error("Error listing public municipalities:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 }

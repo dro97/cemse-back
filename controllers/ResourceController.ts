@@ -138,7 +138,7 @@ export async function listResources(_req: Request, res: Response) {
  *       404:
  *         description: Resource not found
  */
-export async function getResource(req: Request, res: Response) {
+export async function getResource(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: "Missing id" });
   const item = await prisma.resource.findUnique({ where: { id } });
@@ -166,7 +166,7 @@ export async function getResource(req: Request, res: Response) {
  *             schema:
  *               $ref: '#/components/schemas/Resource'
  */
-export async function createResource(req: Request, res: Response) {
+export async function createResource(req: Request, res: Response): Promise<Response> {
   const { 
     title, 
     description, 
@@ -230,12 +230,12 @@ export async function createResource(req: Request, res: Response) {
  *       404:
  *         description: Resource not found
  */
-export async function updateResource(req: Request, res: Response) {
+export async function updateResource(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: "Missing id" });
   const data = req.body;
   try {
-    const item = await prisma.resource.update({ where: { id }, data });
+    const item = await prisma.resource.update({ where: { id: id || '' }, data });
     return res.json(item);
   } catch {
     return res.status(404).json({ message: "Resource not found" });
@@ -261,7 +261,7 @@ export async function updateResource(req: Request, res: Response) {
  *       404:
  *         description: Resource not found
  */
-export async function deleteResource(req: Request, res: Response) {
+export async function deleteResource(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: "Missing id" });
   try {

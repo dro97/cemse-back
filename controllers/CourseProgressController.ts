@@ -31,7 +31,7 @@ import { Request, Response } from "express";
  *       200:
  *         description: Lesson completed successfully
  */
-export async function completeLesson(req: Request, res: Response) {
+export async function completeLesson(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { enrollmentId, lessonId, timeSpent = 0, videoProgress = 1.0 } = req.body;
@@ -44,7 +44,7 @@ export async function completeLesson(req: Request, res: Response) {
 
     // Verificar que el usuario tiene acceso a esta inscripción
     const enrollment = await prisma.courseEnrollment.findUnique({
-      where: { id: enrollmentId },
+      where: { id: enrollmentId || '' },
       include: {
         course: {
           include: {
@@ -73,8 +73,8 @@ export async function completeLesson(req: Request, res: Response) {
     let targetLesson: any = null;
     let targetModule: any = null;
 
-    for (const module of enrollment.course.modules) {
-      const lesson = module.lessons.find(l => l.id === lessonId);
+    for (const module of (enrollment as any).course.modules) {
+      const lesson = (module as any).lessons.find((l: any) => l.id === lessonId);
       if (lesson) {
         targetLesson = lesson;
         targetModule = module;
@@ -128,8 +128,8 @@ export async function completeLesson(req: Request, res: Response) {
     const isModuleCompleted = moduleProgress >= 100;
 
     // Calcular progreso del curso
-    const totalLessons = enrollment.course.modules.reduce((acc, module) => {
-      return acc + module.lessons.length;
+    const totalLessons = (enrollment as any).course.modules.reduce((acc: number, module: any) => {
+      return acc + (module as any).lessons.length;
     }, 0);
 
     const completedLessons = await prisma.lessonProgress.count({
@@ -155,18 +155,18 @@ export async function completeLesson(req: Request, res: Response) {
       }
     } else {
       // Buscar siguiente módulo
-      const currentModuleIndex = enrollment.course.modules.findIndex(m => m.id === targetModule.id);
-      if (currentModuleIndex < enrollment.course.modules.length - 1) {
-        nextModule = enrollment.course.modules[currentModuleIndex + 1];
-        if (nextModule.lessons.length > 0) {
-          nextLesson = nextModule.lessons[0];
+      const currentModuleIndex = (enrollment as any).course.modules.findIndex((m: any) => m.id === targetModule.id);
+      if (currentModuleIndex < (enrollment as any).course.modules.length - 1) {
+        nextModule = (enrollment as any).course.modules[currentModuleIndex + 1];
+        if ((nextModule as any).lessons.length > 0) {
+          nextLesson = (nextModule as any).lessons[0];
         }
       }
     }
 
     // Actualizar la inscripción con el progreso y la siguiente lección
     const updatedEnrollment = await prisma.courseEnrollment.update({
-      where: { id: enrollmentId },
+      where: { id: enrollmentId || '' },
       data: {
         progress: courseProgress,
         currentModuleId: nextModule?.id || targetModule.id,
@@ -199,8 +199,8 @@ export async function completeLesson(req: Request, res: Response) {
       nextLesson: nextLesson ? {
         id: nextLesson.id,
         title: nextLesson.title,
-        moduleId: nextModule.id,
-        moduleTitle: nextModule.title
+        moduleId: (nextModule as any).id,
+        moduleTitle: (nextModule as any).title
       } : null,
       enrollment: {
         id: updatedEnrollment.id,
@@ -241,7 +241,7 @@ export async function completeLesson(req: Request, res: Response) {
  *       200:
  *         description: Module completed successfully
  */
-export async function completeModule(req: Request, res: Response) {
+export async function completeModule(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { enrollmentId, moduleId } = req.body;
@@ -325,7 +325,7 @@ export async function completeModule(req: Request, res: Response) {
     });
 
     const totalLessons = course?.modules.reduce((acc, module) => {
-      return acc + module.lessons.length;
+      return acc + (module as any).lessons.length;
     }, 0) || 0;
 
     const allCompletedLessons = await prisma.lessonProgress.count({
@@ -346,15 +346,15 @@ export async function completeModule(req: Request, res: Response) {
       const currentModuleIndex = course.modules.findIndex(m => m.id === moduleId);
       if (currentModuleIndex < course.modules.length - 1) {
         nextModule = course.modules[currentModuleIndex + 1];
-        if (nextModule.lessons.length > 0) {
-          nextLesson = nextModule.lessons[0];
+        if ((nextModule as any).lessons.length > 0) {
+          nextLesson = (nextModule as any).lessons[0];
         }
       }
     }
 
     // Actualizar la inscripción
     const updatedEnrollment = await prisma.courseEnrollment.update({
-      where: { id: enrollmentId },
+      where: { id: enrollmentId || '' },
       data: {
         progress: courseProgress,
         currentModuleId: nextModule?.id || moduleId,
@@ -373,7 +373,7 @@ export async function completeModule(req: Request, res: Response) {
         id: module.id,
         title: module.title,
         completedLessons: completedLessons.length,
-        totalLessons: module.lessons.length,
+        totalLessons: (module as any).lessons.length,
         progress: 100
       },
       courseProgress: {
@@ -383,8 +383,8 @@ export async function completeModule(req: Request, res: Response) {
         isCompleted: isCourseCompleted
       },
       nextModule: nextModule ? {
-        id: nextModule.id,
-        title: nextModule.title,
+        id: (nextModule as any).id,
+        title: (nextModule as any).title,
         firstLesson: nextLesson ? {
           id: nextLesson.id,
           title: nextLesson.title
@@ -426,14 +426,14 @@ export async function completeModule(req: Request, res: Response) {
  *       200:
  *         description: Enrollment progress details
  */
-export async function getEnrollmentProgress(req: Request, res: Response) {
+export async function getEnrollmentProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { enrollmentId } = req.params;
 
     // Verificar acceso
     const enrollment = await prisma.courseEnrollment.findUnique({
-      where: { id: enrollmentId },
+      where: { id: enrollmentId || '' },
       include: {
         course: {
           include: {
@@ -471,10 +471,10 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
     }
 
     // Calcular progreso por módulo
-    const moduleProgress = enrollment.course.modules.map(module => {
+    const moduleProgress = (enrollment as any).course.modules.map((module: any) => {
       const moduleLessons = module.lessons;
-      const completedLessons = enrollment.lessonProgress.filter(
-        progress => progress.isCompleted && moduleLessons.some(lesson => lesson.id === progress.lessonId)
+      const completedLessons = (enrollment as any).lessonProgress.filter(
+        (progress: any) => progress.isCompleted && moduleLessons.some((lesson: any) => lesson.id === progress.lessonId)
       ).length;
 
       const progress = (completedLessons / moduleLessons.length) * 100;
@@ -488,9 +488,9 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
         completedLessons,
         progress,
         isCompleted,
-        lessons: moduleLessons.map(lesson => {
-          const lessonProgress = enrollment.lessonProgress.find(
-            lp => lp.lessonId === lesson.id
+        lessons: moduleLessons.map((lesson: any) => {
+          const lessonProgress = (enrollment as any).lessonProgress.find(
+            (lp: any) => lp.lessonId === lesson.id
           );
 
           return {
@@ -509,11 +509,11 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
     });
 
     // Calcular progreso general del curso
-    const totalLessons = enrollment.course.modules.reduce((acc, module) => {
-      return acc + module.lessons.length;
+    const totalLessons = (enrollment as any).course.modules.reduce((acc: number, module: any) => {
+      return acc + (module as any).lessons.length;
     }, 0);
 
-    const completedLessons = enrollment.lessonProgress.filter(p => p.isCompleted).length;
+    const completedLessons = (enrollment as any).lessonProgress.filter((p: any) => p.isCompleted).length;
     const courseProgress = (completedLessons / totalLessons) * 100;
 
     // Encontrar la siguiente lección recomendada
@@ -522,7 +522,7 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
 
     for (const module of moduleProgress) {
       if (!module.isCompleted) {
-        const incompleteLesson = module.lessons.find(lesson => !lesson.isCompleted);
+        const incompleteLesson = (module as any).lessons.find((lesson: any) => !lesson.isCompleted);
         if (incompleteLesson) {
           nextLesson = incompleteLesson;
           nextModule = module;
@@ -544,8 +544,8 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
         timeSpent: enrollment.timeSpent
       },
       course: {
-        id: enrollment.course.id,
-        title: enrollment.course.title,
+        id: (enrollment as any).course.id,
+        title: (enrollment as any).course.title,
         totalLessons,
         completedLessons,
         progress: courseProgress,
@@ -555,8 +555,8 @@ export async function getEnrollmentProgress(req: Request, res: Response) {
       nextLesson: nextLesson ? {
         id: nextLesson.id,
         title: nextLesson.title,
-        moduleId: nextModule.id,
-        moduleTitle: nextModule.title
+        moduleId: (nextModule as any).id,
+        moduleTitle: (nextModule as any).title
       } : null
     });
 

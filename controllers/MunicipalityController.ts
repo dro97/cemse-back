@@ -136,7 +136,7 @@ export async function listMunicipalities(_req: Request, res: Response) {
  *       404:
  *         description: Municipality not found
  */
-export async function getMunicipality(req: Request, res: Response) {
+export async function getMunicipality(req: Request, res: Response): Promise<Response> {
   try {
     const { id } = req.params;
     if (!id) {
@@ -144,7 +144,7 @@ export async function getMunicipality(req: Request, res: Response) {
     }
 
     const municipality = await prisma.municipality.findUnique({
-      where: { id },
+      where: { id: id || '' },
       select: {
         id: true,
         name: true,
@@ -243,7 +243,7 @@ export async function getMunicipality(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createMunicipality(req: Request, res: Response) {
+export async function createMunicipality(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is SuperAdmin
     const user = (req as any).user;
@@ -373,7 +373,7 @@ export async function createMunicipality(req: Request, res: Response) {
  *       404:
  *         description: Municipality not found
  */
-export async function updateMunicipality(req: Request, res: Response) {
+export async function updateMunicipality(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is SuperAdmin
     const user = (req as any).user;
@@ -400,7 +400,7 @@ export async function updateMunicipality(req: Request, res: Response) {
     } = req.body;
 
     const municipality = await prisma.municipality.update({
-      where: { id },
+      where: { id: id || '' },
       data: {
         name,
         department,
@@ -460,7 +460,7 @@ export async function updateMunicipality(req: Request, res: Response) {
  *       404:
  *         description: Municipality not found
  */
-export async function deleteMunicipality(req: Request, res: Response) {
+export async function deleteMunicipality(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is SuperAdmin
     const user = (req as any).user;
@@ -475,7 +475,7 @@ export async function deleteMunicipality(req: Request, res: Response) {
 
     // Check if municipality has companies
     const municipality = await prisma.municipality.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         companies: {
           where: { isActive: true }

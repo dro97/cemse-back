@@ -48,6 +48,7 @@ const routes = __importStar(require("./routes"));
 const auth_1 = require("./middleware/auth");
 const path_1 = __importDefault(require("path"));
 const monitoring_1 = require("./middleware/monitoring");
+const minio_1 = require("./lib/minio");
 const app = (0, express_1.default)();
 exports.app = app;
 const server = (0, http_1.createServer)(app);
@@ -69,11 +70,15 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: `http://localhost:${PORT}`,
-                description: "Development server",
+                url: `http://localhost:${PORT}/api`,
+                description: "Development server (localhost)",
             },
             {
-                url: `https://back-end-production-17b6.up.railway.app`,
+                url: `http://0.0.0.0:${PORT}/api`,
+                description: "Development server (network)",
+            },
+            {
+                url: `https://back-end-production-17b6.up.railway.app/api`,
                 description: "Production server",
             },
         ],
@@ -96,10 +101,27 @@ const swaggerOptions = {
 };
 const specs = (0, swagger_jsdoc_1.default)(swaggerOptions);
 app.use((0, cors_1.default)());
-app.use((0, body_parser_1.json)({ limit: '10mb' }));
 app.use(auth_1.requestLogger);
 app.use(monitoring_1.performanceMonitor);
 app.use(monitoring_1.requestTracker);
+app.use('/api/auth', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/company', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/municipality', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/institution', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/entrepreneurship', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/businessplan', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/joboffer', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/jobapplication', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/profile', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/analytics', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/course', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/coursemodule', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/quiz', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/quizquestion', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/quizattempt', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/quizanswer', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/course-enrollments', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/newsarticle/json', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, 'uploads')));
 app.io = io;
 app.use("/api", routes.default);
@@ -107,7 +129,7 @@ app.get("/api/analytics/performance", monitoring_1.getPerformanceMetrics);
 app.get("/api/analytics/errors", monitoring_1.getErrorLogs);
 app.get("/api/analytics/requests", monitoring_1.getRequestLogs);
 app.get("/api/analytics/memory", monitoring_1.getMemoryUsage);
-app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(specs));
+app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(specs));
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
     socket.on("join-room", (role) => {
@@ -121,13 +143,21 @@ io.on("connection", (socket) => {
 app.use(monitoring_1.errorTracker);
 app.use(auth_1.errorHandler);
 app.get("/health", (_req, res) => {
-    res.json({ status: "OK", timestamp: new Date().toISOString() });
+    return res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 app.get("/health/metrics", monitoring_1.getHealthWithMetrics);
-server.listen(PORT, () => {
+server.listen(parseInt(PORT), '0.0.0.0', async () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📚 Swagger docs available at http://localhost:${PORT}/api-docs`);
+    console.log(`🌐 Server accessible from network at http://0.0.0.0:${PORT}`);
+    console.log(`📚 Swagger docs available at http://localhost:${PORT}/api/docs`);
     console.log(`🔌 Socket.IO server running on port ${PORT}`);
     console.log(`📊 Analytics available at http://localhost:${PORT}/api/analytics`);
+    try {
+        await (0, minio_1.initializeBuckets)();
+        console.log(`☁️ MinIO buckets initialized successfully`);
+    }
+    catch (error) {
+        console.error(`❌ Error initializing MinIO buckets:`, error);
+    }
 });
 //# sourceMappingURL=server.js.map

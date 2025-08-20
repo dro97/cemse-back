@@ -184,15 +184,8 @@ export async function getInstitutionProfile(req: Request, res: Response) {
         secondaryColor: true,
         createdAt: true,
         updatedAt: true,
-        companies: {
-          where: { isActive: true },
-          select: {
-            id: true,
-            name: true,
-            businessSector: true,
-            companySize: true
-          }
-        }
+        // Note: Institution model doesn't have companies field
+        // Companies are related to Municipality model
       }
     });
 

@@ -36,13 +36,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const ProfileController = __importStar(require("../controllers/ProfileController"));
 const auth_1 = require("../middleware/auth");
+const upload_1 = require("../middleware/upload");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
 router.get("/", auth_1.requireSuperAdmin, ProfileController.listProfiles);
 router.get("/me", ProfileController.getMyProfile);
 router.get("/:id", ProfileController.getProfile);
 router.post("/", auth_1.requireSuperAdmin, ProfileController.createProfile);
-router.put("/:id", ProfileController.updateProfile);
+router.put("/:id", upload_1.uploadProfileAvatar, ProfileController.updateProfile);
+router.put("/:id/avatar", upload_1.uploadProfileAvatar, ProfileController.updateProfileAvatar);
 router.delete("/:id", auth_1.requireSuperAdmin, ProfileController.deleteProfile);
 exports.default = router;
 //# sourceMappingURL=profile.js.map

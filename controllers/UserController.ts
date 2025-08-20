@@ -78,7 +78,7 @@ export async function listUsers(_req: Request, res: Response) {
  *       404:
  *         description: User not found
  */
-export async function getUser(req: Request, res: Response) {
+export async function getUser(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   const user = await prisma.user.findUnique({ where: { id } });
@@ -86,7 +86,7 @@ export async function getUser(req: Request, res: Response) {
   return res.json(user);
 }
 
-export async function createUser(req: Request, res: Response) {
+export async function createUser(req: Request, res: Response): Promise<Response> {
   try {
     const newUser = await prisma.user.create({ data: req.body });
     return res.status(201).json(newUser);
@@ -95,18 +95,18 @@ export async function createUser(req: Request, res: Response) {
   }
 }
 
-export async function updateUser(req: Request, res: Response) {
+export async function updateUser(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   try {
-    const updated = await prisma.user.update({ where: { id }, data: req.body });
+    const updated = await prisma.user.update({ where: { id: id || '' }, data: req.body });
     return res.json(updated);
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
   }
 }
 
-export async function deleteUser(req: Request, res: Response) {
+export async function deleteUser(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   try {

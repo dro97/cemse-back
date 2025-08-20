@@ -5,7 +5,7 @@ const server_1 = require("../server");
 const router = (0, express_1.Router)();
 router.get("/status", (_req, res) => {
     const connections = server_1.io.engine.clientsCount;
-    res.json({
+    return res.json({
         status: "running",
         connections,
         events: [

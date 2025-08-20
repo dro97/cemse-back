@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 
-export async function listCourseEnrollments(req: Request, res: Response) {
+export async function listCourseEnrollments(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -51,7 +51,7 @@ export async function listCourseEnrollments(req: Request, res: Response) {
         console.log(`📚 Procesando curso: ${enrollment.course.title}`);
         
         const enrichedCourse = {
-          ...enrollment.course,
+          ...(enrollment as any).course,
           modules: await Promise.all(
             enrollment.course.modules.map(async (module) => {
               console.log(`📦 Procesando módulo: ${module.title}`);
@@ -141,7 +141,7 @@ export async function listCourseEnrollments(req: Request, res: Response) {
   }
 }
 
-export async function getCourseEnrollment(req: Request, res: Response) {
+export async function getCourseEnrollment(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const enrollmentId = req.params['id'] || '';
@@ -270,7 +270,7 @@ export async function getCourseEnrollment(req: Request, res: Response) {
   }
 }
 
-export async function createCourseEnrollment(req: Request, res: Response) {
+export async function createCourseEnrollment(req: Request, res: Response): Promise<Response> {
   try {
     const { courseId } = req.body;
     
@@ -326,7 +326,7 @@ export async function createCourseEnrollment(req: Request, res: Response) {
   }
 }
 
-export async function updateCourseEnrollment(req: Request, res: Response) {
+export async function updateCourseEnrollment(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.courseEnrollment.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -334,7 +334,7 @@ export async function updateCourseEnrollment(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteCourseEnrollment(req: Request, res: Response) {
+export async function deleteCourseEnrollment(req: Request, res: Response): Promise<Response> {
   await prisma.courseEnrollment.delete({
     where: { id: req.params['id'] || '' }
   });

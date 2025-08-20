@@ -329,10 +329,10 @@ export async function getJobOffer(req: Request, res: Response) {
       return res.status(403).json({ message: "Access denied" });
     }
     
-    res.json(item);
+    return res.json(item);
   } catch (error: any) {
     console.error("Error getting job offer:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
       error: error.message
     });
@@ -629,10 +629,10 @@ export async function updateJobOffer(req: Request, res: Response) {
       data: updateData
     });
 
-    res.json(updated);
+    return res.json(updated);
   } catch (error: any) {
     console.error("Error updating job offer:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
       error: error.message
     });

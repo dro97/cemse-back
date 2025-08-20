@@ -1,11 +1,11 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import { ApplicationStatus } from "@prisma/client";
-import multer from "multer";
+// import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-export async function listJobApplications(req: Request, res: Response) {
+export async function listJobApplications(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -70,7 +70,7 @@ export async function listJobApplications(req: Request, res: Response) {
   }
 }
 
-export async function getJobApplication(req: Request, res: Response) {
+export async function getJobApplication(req: Request, res: Response): Promise<Response> {
   try {
     const item = await prisma.jobApplication.findUnique({
       where: { id: req.params['id'] || '' as string },
@@ -126,7 +126,7 @@ export async function getJobApplication(req: Request, res: Response) {
   }
 }
 
-export async function createJobApplication(req: Request, res: Response) {
+export async function createJobApplication(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -148,7 +148,7 @@ export async function createJobApplication(req: Request, res: Response) {
       });
     }
     
-    const { jobOfferId, coverLetter, notes, cvUrl, coverLetterUrl, message, questionAnswers, status } = req.body;
+    const { jobOfferId, coverLetter, cvUrl, coverLetterUrl, message, questionAnswers, status } = req.body;
     
     // Mapear status del frontend a valores válidos del enum
     let applicationStatus = 'SENT'; // valor por defecto
@@ -306,7 +306,7 @@ export async function createJobApplication(req: Request, res: Response) {
   }
 }
 
-export async function updateJobApplication(req: Request, res: Response) {
+export async function updateJobApplication(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -331,7 +331,7 @@ export async function updateJobApplication(req: Request, res: Response) {
     
     // Check permissions
     const canUpdate = 
-      user.type === 'company' && application.jobOffer.companyId === user.id ||
+      user.type === 'company' && (application as any).jobOffer.companyId === user.id ||
       user.type === 'user' && application.applicantId === user.id ||
       user.role === 'SUPERADMIN';
     
@@ -393,7 +393,7 @@ export async function updateJobApplication(req: Request, res: Response) {
   }
 }
 
-export async function getApplicationsByJobOffer(req: Request, res: Response) {
+export async function getApplicationsByJobOffer(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { jobOfferId } = req.query;
@@ -457,7 +457,7 @@ export async function getApplicationsByJobOffer(req: Request, res: Response) {
   }
 }
 
-export async function testAuth(req: Request, res: Response) {
+export async function testAuth(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -477,7 +477,7 @@ export async function testAuth(req: Request, res: Response) {
   }
 }
 
-export async function deleteJobApplication(req: Request, res: Response) {
+export async function deleteJobApplication(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -565,7 +565,7 @@ export async function deleteJobApplication(req: Request, res: Response) {
  *       404:
  *         description: Job offer not found
  */
-export async function checkApplicationStatus(req: Request, res: Response) {
+export async function checkApplicationStatus(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { jobOfferId } = req.params;
@@ -676,7 +676,7 @@ export async function checkApplicationStatus(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function updateApplicationStatus(req: Request, res: Response) {
+export async function updateApplicationStatus(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -732,7 +732,7 @@ export async function updateApplicationStatus(req: Request, res: Response) {
     }
 
     // Check permissions - only company owners can update status
-    if (user.type !== 'company' || application.jobOffer.companyId !== user.id) {
+    if (user.type !== 'company' || (application as any).jobOffer.companyId !== user.id) {
       return res.status(403).json({ message: "Access denied. Only company owners can update application status" });
     }
 

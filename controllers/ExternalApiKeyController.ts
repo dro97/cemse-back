@@ -117,7 +117,7 @@ export const revokeExternalApiKey = [requireSuperAdmin, async (req: Request, res
   const { id } = req.params;
   if (!id) return res.status(400).json({ message: "Missing id" });
   const apiKey = await prisma.externalApiKey.update({
-    where: { id },
+    where: { id: id || '' },
     data: { active: false, revokedAt: new Date() }
   }).catch(() => null);
   if (!apiKey) return res.status(404).json({ message: "API Key no encontrada" });

@@ -363,7 +363,7 @@ export async function serveVideo(req: Request, res: Response) {
     
     if (range) {
       const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
+      const start = parseInt(parts[0] || "0", 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
       const chunksize = (end - start) + 1;
       const file = fs.createReadStream(videoPath, { start, end });
@@ -375,6 +375,7 @@ export async function serveVideo(req: Request, res: Response) {
       };
       res.writeHead(206, head);
       file.pipe(res);
+      return;
     } else {
       const head = {
         'Content-Length': fileSize,
@@ -382,6 +383,7 @@ export async function serveVideo(req: Request, res: Response) {
       };
       res.writeHead(200, head);
       fs.createReadStream(videoPath).pipe(res);
+      return;
     }
   } catch (error: any) {
     console.error("Error serving video:", error);

@@ -3,11 +3,11 @@ import { Readable } from 'stream';
 
 // Configuración de MinIO
 const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT || '127.0.0.1',
-  port: parseInt(process.env.MINIO_PORT || '9000'),
-  useSSL: process.env.MINIO_USE_SSL === 'true',
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin'
+  endPoint: process.env['MINIO_ENDPOINT'] || '127.0.0.1',
+  port: parseInt(process.env['MINIO_PORT'] || '9000'),
+  useSSL: process.env['MINIO_USE_SSL'] === 'true',
+  accessKey: process.env['MINIO_ACCESS_KEY'] || 'minioadmin',
+  secretKey: process.env['MINIO_SECRET_KEY'] || 'minioadmin'
 });
 
 // Nombres de buckets
@@ -50,7 +50,7 @@ export async function initializeBuckets() {
           await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
           console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
         } catch (policyError) {
-          console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, policyError.message);
+          console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, (policyError as any).message);
         }
       }
     }
@@ -106,7 +106,7 @@ export async function uploadToMinio(
     });
     
     // Generar URL pública
-    const baseUrl = process.env.MINIO_BASE_URL || `http://${process.env.MINIO_ENDPOINT || '127.0.0.1'}:${process.env.MINIO_PORT || '9000'}`;
+    const baseUrl = process.env['MINIO_BASE_URL'] || `http://${process.env['MINIO_ENDPOINT'] || '127.0.0.1'}:${process.env['MINIO_PORT'] || '9000'}`;
     const publicUrl = `${baseUrl}/${bucketName}/${objectName}`;
     
     console.log(`✅ Archivo subido exitosamente: ${publicUrl}`);

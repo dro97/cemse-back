@@ -12,7 +12,7 @@ export const uploadLessonVideo = multer({
     fileSize: 500 * 1024 * 1024, // 500MB máximo para videos de lecciones
     files: 1
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     // Permitir solo videos
     const allowedVideoTypes = [
       'video/mp4',
@@ -25,7 +25,7 @@ export const uploadLessonVideo = multer({
       'video/mkv'
     ];
     
-    if (allowedVideoTypes.includes(file.mimetype)) {
+    if (allowedVideoTypes.includes(file?.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Solo se permiten archivos de video (MP4, WebM, OGG, AVI, MOV, WMV, FLV, MKV)'));
@@ -49,9 +49,9 @@ export const processAndUploadVideo = async (req: any, res: any, next: any) => {
 
     const file = req.file;
     console.log('📁 [DEBUG] Archivo recibido:', {
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
+      originalname: file?.originalname,
+      mimetype: file?.mimetype,
+      size: file?.size,
       bufferLength: file.buffer ? file.buffer.length : 'No buffer'
     });
 
@@ -104,7 +104,7 @@ export const uploadLessonFiles = multer({
     fileSize: 500 * 1024 * 1024, // 500MB máximo
     files: 5 // Máximo 5 archivos
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     // Permitir videos, imágenes y documentos
     const allowedTypes = [
       // Videos
@@ -121,10 +121,10 @@ export const uploadLessonFiles = multer({
       'text/plain', 'text/csv'
     ];
     
-    if (allowedTypes.includes(file.mimetype)) {
+    if (allowedTypes.includes(file?.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`Tipo de archivo no permitido: ${file.mimetype}`));
+      cb(new Error(`Tipo de archivo no permitido: ${file?.mimetype}`));
     }
   }
 }).fields([
@@ -153,22 +153,22 @@ export const processAndUploadLessonFiles = async (req: any, res: any, next: any)
         const file = fileArray[0];
         const timestamp = Date.now();
         const randomSuffix = Math.round(Math.random() * 1E9);
-        const fileExtension = file.originalname.split('.').pop();
+        const fileExtension = file?.originalname?.split('.')?.pop() || 'mp4';
         const objectName = `lesson-video-${timestamp}-${randomSuffix}.${fileExtension}`;
 
         const videoUrl = await uploadToMinio(
           BUCKETS.VIDEOS,
           objectName,
-          file.buffer,
-          file.mimetype
+          file?.buffer || Buffer.alloc(0),
+          file?.mimetype || 'application/octet-stream'
         );
 
         uploadedFiles.video = {
           url: videoUrl,
           filename: objectName,
-          originalName: file.originalname,
-          size: file.size,
-          mimetype: file.mimetype,
+          originalName: file?.originalname,
+          size: file?.size,
+          mimetype: file?.mimetype,
           bucket: BUCKETS.VIDEOS
         };
       } else if (fieldName === 'thumbnail') {
@@ -176,22 +176,22 @@ export const processAndUploadLessonFiles = async (req: any, res: any, next: any)
         const file = fileArray[0];
         const timestamp = Date.now();
         const randomSuffix = Math.round(Math.random() * 1E9);
-        const fileExtension = file.originalname.split('.').pop();
+        const fileExtension = file?.originalname?.split('.')?.pop() || 'mp4';
         const objectName = `lesson-thumbnail-${timestamp}-${randomSuffix}.${fileExtension}`;
 
         const imageUrl = await uploadToMinio(
           BUCKETS.IMAGES,
           objectName,
-          file.buffer,
-          file.mimetype
+          file?.buffer || Buffer.alloc(0),
+          file?.mimetype || 'application/octet-stream'
         );
 
         uploadedFiles.thumbnail = {
           url: imageUrl,
           filename: objectName,
-          originalName: file.originalname,
-          size: file.size,
-          mimetype: file.mimetype,
+          originalName: file?.originalname,
+          size: file?.size,
+          mimetype: file?.mimetype,
           bucket: BUCKETS.IMAGES
         };
       } else if (fieldName === 'attachments') {
@@ -201,30 +201,30 @@ export const processAndUploadLessonFiles = async (req: any, res: any, next: any)
         for (const file of fileArray) {
           const timestamp = Date.now();
           const randomSuffix = Math.round(Math.random() * 1E9);
-          const fileExtension = file.originalname.split('.').pop();
+          const fileExtension = file?.originalname?.split('.')?.pop() || 'mp4';
           const objectName = `lesson-attachment-${timestamp}-${randomSuffix}.${fileExtension}`;
 
           // Determinar bucket según tipo de archivo
           let bucket = BUCKETS.DOCUMENTS;
-          if (file.mimetype.startsWith('image/')) {
-            bucket = BUCKETS.IMAGES;
-          } else if (file.mimetype.startsWith('video/')) {
-            bucket = BUCKETS.VIDEOS;
+          if (file?.mimetype.startsWith('image/')) {
+            bucket = BUCKETS.IMAGES as any;
+          } else if (file?.mimetype.startsWith('video/')) {
+            bucket = BUCKETS.VIDEOS as any;
           }
 
           const fileUrl = await uploadToMinio(
             bucket,
             objectName,
-            file.buffer,
-            file.mimetype
+            file?.buffer || Buffer.alloc(0),
+            file?.mimetype || 'application/octet-stream'
           );
 
           uploadedFiles.attachments.push({
             url: fileUrl,
             filename: objectName,
-            originalName: file.originalname,
-            size: file.size,
-            mimetype: file.mimetype,
+            originalName: file?.originalname,
+            size: file?.size,
+            mimetype: file?.mimetype,
             bucket: bucket
           });
         }
@@ -252,7 +252,7 @@ export const uploadLessonResourceToMinIO = (req: any, res: any, next: any) => {
       fileSize: 50 * 1024 * 1024, // 50MB limit for resources
       files: 1
     },
-    fileFilter: (req, file, cb) => {
+    fileFilter: (_req, file, cb) => {
       // Allow common document and media types
       const allowedTypes = [
         'application/pdf',
@@ -274,7 +274,7 @@ export const uploadLessonResourceToMinIO = (req: any, res: any, next: any) => {
         'text/plain'
       ];
       
-      if (allowedTypes.includes(file.mimetype)) {
+      if (allowedTypes.includes(file?.mimetype)) {
         cb(null, true);
       } else {
         cb(new Error('File type not allowed'));
@@ -303,36 +303,36 @@ export const uploadLessonResourceToMinIO = (req: any, res: any, next: any) => {
       try {
         const file = req.files['file'][0];
         console.log('📁 [DEBUG] Archivo recibido:', {
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+          size: file?.size,
           bufferLength: file.buffer.length
         });
         
         // Generate unique filename
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
+        const ext = path.extname(file?.originalname);
         const filename = `lesson-resource-${uniqueSuffix}${ext}`;
         
         console.log('📝 [DEBUG] Nombre del objeto generado:', filename);
         
         // Upload to MinIO
         console.log('☁️ [DEBUG] Subiendo archivo a MinIO...');
-        const url = await uploadToMinio('resources', filename, file.buffer, file.mimetype);
+        const url = await uploadToMinio('resources', filename, file?.buffer || Buffer.alloc(0), file?.mimetype);
         console.log('✅ Archivo subido exitosamente:', url);
         
         // Store file info in request for controller to use
-        req.uploadedResource = {
+        (req as any).uploadedResource = {
           url: url,
           filename: filename,
-          originalName: file.originalname,
-          size: file.size,
-          mimetype: file.mimetype,
+          originalName: file?.originalname,
+          size: file?.size,
+          mimetype: file?.mimetype,
           bucket: 'resources'
         };
         
         console.log('✅ [DEBUG] Archivo subido a MinIO:', url);
-        console.log('📋 [DEBUG] req.uploadedResource configurado:', req.uploadedResource);
+        console.log('📋 [DEBUG] (req as any).uploadedResource configurado:', (req as any).uploadedResource);
         
       } catch (error) {
         console.error('❌ [ERROR] Error uploading to MinIO:', error);

@@ -36,7 +36,7 @@ export async function listRefreshTokens(_req: Request, res: Response) {
   return res.json(tokens);
 }
 
-export async function getRefreshToken(req: Request, res: Response) {
+export async function getRefreshToken(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   const token = await prisma.refreshToken.findUnique({ where: { id } });
@@ -44,7 +44,7 @@ export async function getRefreshToken(req: Request, res: Response) {
   return res.json(token);
 }
 
-export async function createRefreshToken(req: Request, res: Response) {
+export async function createRefreshToken(req: Request, res: Response): Promise<Response> {
   try {
     const newToken = await prisma.refreshToken.create({ data: req.body });
     return res.status(201).json(newToken);
@@ -53,18 +53,18 @@ export async function createRefreshToken(req: Request, res: Response) {
   }
 }
 
-export async function updateRefreshToken(req: Request, res: Response) {
+export async function updateRefreshToken(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   try {
-    const updated = await prisma.refreshToken.update({ where: { id }, data: req.body });
+    const updated = await prisma.refreshToken.update({ where: { id: id || '' }, data: req.body });
     return res.json(updated);
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
   }
 }
 
-export async function deleteRefreshToken(req: Request, res: Response) {
+export async function deleteRefreshToken(req: Request, res: Response): Promise<Response> {
   const { id } = req.params;
   if (!id) return res.status(400).json({ error: "Missing id" });
   try {

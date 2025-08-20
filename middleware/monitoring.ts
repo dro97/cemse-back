@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { performance } from "perf_hooks";
 
 // Performance metrics storage
@@ -50,13 +50,13 @@ export function performanceMonitor(req: Request, res: Response, next: NextFuncti
     const responseTime = end - start;
 
     const metric: PerformanceMetrics = {
-      endpoint: req.originalUrl,
+      endpoint: (req as any).originalUrl,
       method: req.method,
       responseTime,
       statusCode: res.statusCode,
       timestamp: new Date(),
-      userAgent: req.get('User-Agent') || undefined,
-      ip: req.ip || req.connection.remoteAddress || undefined
+      userAgent: (req as any).get('User-Agent') || undefined,
+      ip: (req as any).ip || (req as any).connection.remoteAddress || undefined
     };
 
     performanceMetrics.push(metric);
@@ -75,13 +75,13 @@ export function performanceMonitor(req: Request, res: Response, next: NextFuncti
 // Error tracking middleware
 export function errorTracker(err: any, req: Request, _res: Response, next: NextFunction) {
   const errorLog: ErrorLog = {
-    endpoint: req.originalUrl,
+    endpoint: (req as any).originalUrl,
     method: req.method,
     error: err.message,
     stack: err.stack,
     timestamp: new Date(),
-    userAgent: req.get('User-Agent') || undefined,
-    ip: req.ip || req.connection.remoteAddress || undefined
+    userAgent: (req as any).get('User-Agent') || undefined,
+    ip: (req as any).ip || (req as any).connection.remoteAddress || undefined
   };
 
   errorLogs.push(errorLog);
@@ -98,11 +98,11 @@ export function errorTracker(err: any, req: Request, _res: Response, next: NextF
 // Request tracking middleware
 export function requestTracker(req: Request, _res: Response, next: NextFunction) {
   const requestLog: RequestLog = {
-    endpoint: req.originalUrl,
+    endpoint: (req as any).originalUrl,
     method: req.method,
     timestamp: new Date(),
-    userAgent: req.get('User-Agent') || undefined,
-    ip: req.ip || req.connection.remoteAddress || undefined,
+    userAgent: (req as any).get('User-Agent') || undefined,
+    ip: (req as any).ip || (req as any).connection.remoteAddress || undefined,
     userId: (req as any).user?.id,
     userRole: (req as any).user?.role
   };
@@ -140,7 +140,7 @@ export function getPerformanceMetrics(_req: Request, res: Response) {
     return counts;
   }, {} as Record<string, number>);
 
-  res.json({
+  return res.json({
     totalRequests: recentMetrics.length,
     averageResponseTime: Math.round(averageResponseTime * 100) / 100,
     statusCodeCounts,
@@ -162,7 +162,7 @@ export function getErrorLogs(_req: Request, res: Response) {
     return counts;
   }, {} as Record<string, number>);
 
-  res.json({
+  return res.json({
     totalErrors: recentErrors.length,
     errorCounts,
     recentErrors: recentErrors.slice(-10), // Last 10 errors
@@ -189,7 +189,7 @@ export function getRequestLogs(_req: Request, res: Response) {
     return counts;
   }, {} as Record<string, number>);
 
-  res.json({
+  return res.json({
     totalRequests: recentRequests.length,
     userRoleCounts,
     methodCounts,
@@ -219,7 +219,7 @@ export function getHealthWithMetrics(_req: Request, res: Response) {
     ? (recentErrors.length / recentMetrics.length) * 100
     : 0;
 
-  res.json({
+  return res.json({
     status: 'OK',
     timestamp: now.toISOString(),
     metrics: {
@@ -235,7 +235,7 @@ export function getHealthWithMetrics(_req: Request, res: Response) {
 export function getMemoryUsage(_req: Request, res: Response) {
   const usage = process.memoryUsage();
   
-  res.json({
+  return res.json({
     rss: Math.round(usage.rss / 1024 / 1024 * 100) / 100, // MB
     heapTotal: Math.round(usage.heapTotal / 1024 / 1024 * 100) / 100, // MB
     heapUsed: Math.round(usage.heapUsed / 1024 / 1024 * 100) / 100, // MB

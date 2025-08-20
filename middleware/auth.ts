@@ -245,7 +245,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 export function rateLimit(maxRequests: number = 100, windowMs: number = 15 * 60 * 1000) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip || req.connection.remoteAddress || "unknown";
+    const key = (req as any).ip || (req as any).connection.remoteAddress || "unknown";
     const now = Date.now();
     
     const rateLimit = rateLimitMap.get(key);
@@ -272,7 +272,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
   
   res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+    console.log(`${req.method} ${(req as any).originalUrl} ${res.statusCode} ${duration}ms`);
   });
   
   next();

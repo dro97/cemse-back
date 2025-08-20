@@ -6,7 +6,7 @@ export async function listQuizAnswers(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getQuizAnswer(req: Request, res: Response) {
+export async function getQuizAnswer(req: Request, res: Response): Promise<Response> {
   const item = await prisma.quizAnswer.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,14 +14,14 @@ export async function getQuizAnswer(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createQuizAnswer(req: Request, res: Response) {
+export async function createQuizAnswer(req: Request, res: Response): Promise<Response> {
   const newItem = await prisma.quizAnswer.create({
     data: req.body
   });
   return res.status(201).json(newItem);
 }
 
-export async function updateQuizAnswer(req: Request, res: Response) {
+export async function updateQuizAnswer(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.quizAnswer.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -29,7 +29,7 @@ export async function updateQuizAnswer(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteQuizAnswer(req: Request, res: Response) {
+export async function deleteQuizAnswer(req: Request, res: Response): Promise<Response> {
   await prisma.quizAnswer.delete({
     where: { id: req.params['id'] || '' }
   });

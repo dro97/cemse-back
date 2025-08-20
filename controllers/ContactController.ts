@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 
 // Buscar jóvenes para agregar a la red
-export async function searchYouthUsers(req: Request, res: Response) {
+export async function searchYouthUsers(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -72,8 +72,8 @@ export async function searchYouthUsers(req: Request, res: Response) {
 
     const usersWithContactStatus = users.map((user, index) => ({
       ...user,
-      contactStatus: contactStatuses[index].contactStatus,
-      contactId: contactStatuses[index].contactId
+      contactStatus: contactStatuses[index]?.contactStatus,
+      contactId: contactStatuses[index]?.contactId
     }));
 
     return res.json({
@@ -95,7 +95,7 @@ export async function searchYouthUsers(req: Request, res: Response) {
 }
 
 // Enviar solicitud de contacto
-export async function sendContactRequest(req: Request, res: Response) {
+export async function sendContactRequest(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -178,7 +178,7 @@ export async function sendContactRequest(req: Request, res: Response) {
 }
 
 // Obtener solicitudes de contacto recibidas
-export async function getReceivedContactRequests(req: Request, res: Response) {
+export async function getReceivedContactRequests(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -243,7 +243,7 @@ export async function getReceivedContactRequests(req: Request, res: Response) {
 }
 
 // Aceptar solicitud de contacto
-export async function acceptContactRequest(req: Request, res: Response) {
+export async function acceptContactRequest(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -299,7 +299,7 @@ export async function acceptContactRequest(req: Request, res: Response) {
 }
 
 // Rechazar solicitud de contacto
-export async function rejectContactRequest(req: Request, res: Response) {
+export async function rejectContactRequest(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -345,7 +345,7 @@ export async function rejectContactRequest(req: Request, res: Response) {
 }
 
 // Obtener lista de contactos (conexiones aceptadas)
-export async function getContacts(req: Request, res: Response) {
+export async function getContacts(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -440,7 +440,7 @@ export async function getContacts(req: Request, res: Response) {
 }
 
 // Eliminar contacto
-export async function removeContact(req: Request, res: Response) {
+export async function removeContact(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -487,7 +487,7 @@ export async function removeContact(req: Request, res: Response) {
 }
 
 // Obtener estadísticas de la red
-export async function getNetworkStats(req: Request, res: Response) {
+export async function getNetworkStats(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     

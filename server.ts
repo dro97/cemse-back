@@ -77,8 +77,8 @@ const specs = swaggerJsdoc(swaggerOptions);
 // Middleware
 app.use(cors());
 app.use(requestLogger);
-app.use(performanceMonitor);
-app.use(requestTracker);
+app.use(performanceMonitor as any);
+app.use(requestTracker as any);
 
 // JSON parsing middleware - apply only to specific routes that need it
 app.use('/api/auth', json({ limit: '10mb' }));
@@ -113,10 +113,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api", routes.default);
 
 // Analytics routes (protected by authentication)
-app.get("/api/analytics/performance", getPerformanceMetrics);
-app.get("/api/analytics/errors", getErrorLogs);
-app.get("/api/analytics/requests", getRequestLogs);
-app.get("/api/analytics/memory", getMemoryUsage);
+app.get("/api/analytics/performance", getPerformanceMetrics as any);
+app.get("/api/analytics/errors", getErrorLogs as any);
+app.get("/api/analytics/requests", getRequestLogs as any);
+app.get("/api/analytics/memory", getMemoryUsage as any);
 
 // Swagger documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(specs));
@@ -138,18 +138,18 @@ io.on("connection", (socket) => {
 });
 
 // Error handling middleware (must be last)
-app.use(errorTracker);
+app.use(errorTracker as any);
 app.use(errorHandler);
 
 // Health check endpoints
 app.get("/health", (_req, res) => {
-  res.json({ status: "OK", timestamp: new Date().toISOString() });
+  return res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
-app.get("/health/metrics", getHealthWithMetrics);
+app.get("/health/metrics", getHealthWithMetrics as any);
 
 // Start server
-server.listen(PORT, '0.0.0.0', async () => {
+server.listen(parseInt(PORT as string), '0.0.0.0', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Server accessible from network at http://0.0.0.0:${PORT}`);
   console.log(`📚 Swagger docs available at http://localhost:${PORT}/api/docs`);

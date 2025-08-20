@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 
 // Obtener CV del usuario
-export async function getUserCV(req: Request, res: Response) {
+export async function getUserCV(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -40,12 +40,12 @@ export async function getUserCV(req: Request, res: Response) {
       },
       jobTitle: profile.jobTitle,
       education: {
-        level: profile.educationLevel,
+        level: (profile as any).educationLevel,
         currentInstitution: profile.currentInstitution,
         graduationYear: profile.graduationYear,
         isStudying: profile.isStudying,
         // Educación detallada
-        educationHistory: profile.educationHistory || [],
+        educationHistory: (profile as any).educationHistory || [],
         currentDegree: profile.currentDegree,
         universityName: profile.universityName,
         universityStartDate: profile.universityStartDate,
@@ -77,7 +77,7 @@ export async function getUserCV(req: Request, res: Response) {
 }
 
 // Actualizar CV del usuario
-export async function updateUserCV(req: Request, res: Response) {
+export async function updateUserCV(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -109,36 +109,36 @@ export async function updateUserCV(req: Request, res: Response) {
       updateData.documentNumber = cvData.personalInfo.documentNumber;
     }
 
-    if (cvData.education) {
-      updateData.educationLevel = cvData.education.level;
-      updateData.currentInstitution = cvData.education.currentInstitution;
-      updateData.graduationYear = cvData.education.graduationYear;
-      updateData.isStudying = cvData.education.isStudying;
+    if ((cvData as any).education) {
+      (updateData as any).educationLevel = (cvData as any).education.level;
+      updateData.currentInstitution = (cvData as any).education.currentInstitution;
+      updateData.graduationYear = (cvData as any).education.graduationYear;
+      updateData.isStudying = (cvData as any).education.isStudying;
       
       // Educación detallada
-      if (cvData.education.educationHistory) {
-        updateData.educationHistory = cvData.education.educationHistory;
+      if ((cvData as any).education.educationHistory) {
+        (updateData as any).educationHistory = (cvData as any).education.educationHistory;
       }
-      if (cvData.education.currentDegree) {
-        updateData.currentDegree = cvData.education.currentDegree;
+      if ((cvData as any).education.currentDegree) {
+        updateData.currentDegree = (cvData as any).education.currentDegree;
       }
-      if (cvData.education.universityName) {
-        updateData.universityName = cvData.education.universityName;
+      if ((cvData as any).education.universityName) {
+        updateData.universityName = (cvData as any).education.universityName;
       }
-      if (cvData.education.universityStartDate) {
-        updateData.universityStartDate = new Date(cvData.education.universityStartDate);
+      if ((cvData as any).education.universityStartDate) {
+        updateData.universityStartDate = new Date((cvData as any).education.universityStartDate);
       }
-      if (cvData.education.universityEndDate) {
-        updateData.universityEndDate = new Date(cvData.education.universityEndDate);
+      if ((cvData as any).education.universityEndDate) {
+        updateData.universityEndDate = new Date((cvData as any).education.universityEndDate);
       }
-      if (cvData.education.universityStatus) {
-        updateData.universityStatus = cvData.education.universityStatus;
+      if ((cvData as any).education.universityStatus) {
+        updateData.universityStatus = (cvData as any).education.universityStatus;
       }
-      if (cvData.education.gpa !== undefined) {
-        updateData.gpa = cvData.education.gpa;
+      if ((cvData as any).education.gpa !== undefined) {
+        updateData.gpa = (cvData as any).education.gpa;
       }
-      if (cvData.education.academicAchievements) {
-        updateData.academicAchievements = cvData.education.academicAchievements;
+      if ((cvData as any).education.academicAchievements) {
+        updateData.academicAchievements = (cvData as any).education.academicAchievements;
       }
     }
 
@@ -214,7 +214,7 @@ export async function updateUserCV(req: Request, res: Response) {
 }
 
 // Obtener carta de presentación del usuario
-export async function getUserCoverLetter(req: Request, res: Response) {
+export async function getUserCoverLetter(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -267,7 +267,7 @@ ${profile.firstName || '[Tu nombre]'} ${profile.lastName || ''}`,
 }
 
 // Guardar carta de presentación del usuario
-export async function saveUserCoverLetter(req: Request, res: Response) {
+export async function saveUserCoverLetter(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -327,7 +327,7 @@ export async function saveUserCoverLetter(req: Request, res: Response) {
 }
 
 // Generar CV completo para postulación
-export async function generateCVForApplication(req: Request, res: Response) {
+export async function generateCVForApplication(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -385,7 +385,7 @@ export async function generateCVForApplication(req: Request, res: Response) {
         documentNumber: profile.documentNumber
       },
       education: {
-        level: profile.educationLevel,
+        level: (profile as any).educationLevel,
         currentInstitution: profile.currentInstitution,
         graduationYear: profile.graduationYear,
         isStudying: profile.isStudying,
@@ -419,7 +419,7 @@ export async function generateCVForApplication(req: Request, res: Response) {
 
 Me dirijo a ustedes con gran interés para postularme a la posición de "${jobOffer.title}" que han publicado.
 
-Mi formación en ${profile.educationLevel} y mis habilidades en ${profile.skills?.join(', ') || 'diversas áreas'} me han preparado para enfrentar los desafíos que presenta esta posición.
+Mi formación en ${(profile as any).educationLevel} y mis habilidades en ${profile.skills?.join(', ') || 'diversas áreas'} me han preparado para enfrentar los desafíos que presenta esta posición.
 
 Estoy comprometido con mi desarrollo profesional y creo que esta oportunidad me permitiría crecer y contribuir significativamente a su organización.
 

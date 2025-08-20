@@ -85,9 +85,9 @@ export async function listCertificates(_req: Request, res: Response) {
  *       404:
  *         description: Certificate not found
  */
-export async function getCertificate(req: Request, res: Response) {
+export async function getCertificate(req: Request, res: Response): Promise<Response> {
   const item = await prisma.certificate.findUnique({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   if (!item) return res.status(404).json({ message: "Not found" });
   return res.json(item);
@@ -115,7 +115,7 @@ export async function getCertificate(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createCertificate(req: Request, res: Response) {
+export async function createCertificate(req: Request, res: Response): Promise<Response> {
   const { 
     title, 
     description, 
@@ -170,9 +170,9 @@ export async function createCertificate(req: Request, res: Response) {
  *       404:
  *         description: Certificate not found
  */
-export async function updateCertificate(req: Request, res: Response) {
+export async function updateCertificate(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.certificate.update({
-    where: { id: req.params["id"] || "" },
+    where: { id: req.params['id'] || "" },
     data: req.body
   });
   return res.json(updated);
@@ -197,9 +197,9 @@ export async function updateCertificate(req: Request, res: Response) {
  *       404:
  *         description: Certificate not found
  */
-export async function deleteCertificate(req: Request, res: Response) {
+export async function deleteCertificate(req: Request, res: Response): Promise<Response> {
   await prisma.certificate.delete({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   return res.status(204).end();
 }

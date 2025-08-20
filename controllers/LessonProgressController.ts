@@ -24,7 +24,7 @@ import { Request, Response } from "express";
  *       200:
  *         description: List of lesson progress
  */
-export async function listLessonProgresss(req: Request, res: Response) {
+export async function listLessonProgresss(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { enrollmentId, lessonId } = req.query;
@@ -116,13 +116,13 @@ export async function listLessonProgresss(req: Request, res: Response) {
  *       404:
  *         description: Lesson progress not found
  */
-export async function getLessonProgress(req: Request, res: Response) {
+export async function getLessonProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
     
     const item = await prisma.lessonProgress.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         lesson: {
           select: {
@@ -163,7 +163,7 @@ export async function getLessonProgress(req: Request, res: Response) {
     }
     
     // Check permissions - users can only see their own progress, but admins can see all
-    if (user && user.type === 'user' && item.enrollment.student.id !== user.id && user.role !== 'SUPERADMIN') {
+    if (user && user.type === 'user' && (item as any).enrollment.student.id !== user.id && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied" });
     }
     
@@ -211,7 +211,7 @@ export async function getLessonProgress(req: Request, res: Response) {
  *       201:
  *         description: Lesson progress created successfully
  */
-export async function createLessonProgress(req: Request, res: Response) {
+export async function createLessonProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { enrollmentId, lessonId, isCompleted, timeSpent, videoProgress } = req.body;
@@ -335,7 +335,7 @@ export async function createLessonProgress(req: Request, res: Response) {
  *       404:
  *         description: Lesson progress not found
  */
-export async function updateLessonProgress(req: Request, res: Response) {
+export async function updateLessonProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -343,7 +343,7 @@ export async function updateLessonProgress(req: Request, res: Response) {
     
     // Check if progress exists
     const existingProgress = await prisma.lessonProgress.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         enrollment: {
           select: {
@@ -358,7 +358,7 @@ export async function updateLessonProgress(req: Request, res: Response) {
     }
     
     // Check permissions
-    if (user.type === 'user' && existingProgress.enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
+    if (user.type === 'user' && (existingProgress as any).enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied" });
     }
     
@@ -380,7 +380,7 @@ export async function updateLessonProgress(req: Request, res: Response) {
     }
     
     const updated = await prisma.lessonProgress.update({
-      where: { id },
+      where: { id: id || '' },
       data: updateData,
       include: {
         lesson: {
@@ -423,14 +423,14 @@ export async function updateLessonProgress(req: Request, res: Response) {
  *       404:
  *         description: Lesson progress not found
  */
-export async function deleteLessonProgress(req: Request, res: Response) {
+export async function deleteLessonProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
     
     // Check if progress exists
     const existingProgress = await prisma.lessonProgress.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         enrollment: {
           select: {
@@ -445,12 +445,17 @@ export async function deleteLessonProgress(req: Request, res: Response) {
     }
     
     // Check permissions
-    if (user.type === 'user' && existingProgress.enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
+    if (user.type === 'user' && (existingProgress as any).enrollment.studentId !== user.id && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied" });
     }
     
     await prisma.lessonProgress.delete({
-      where: { id }
+              where: { 
+          enrollmentId_lessonId: {
+            enrollmentId: req.params['enrollmentId'] || '',
+            lessonId: req.params['lessonId'] || ''
+          }
+        }
     });
     
     return res.status(204).end();
@@ -481,7 +486,7 @@ export async function deleteLessonProgress(req: Request, res: Response) {
  *       200:
  *         description: Course progress found
  */
-export async function getCourseProgress(req: Request, res: Response) {
+export async function getCourseProgress(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { courseId } = req.params;
@@ -489,7 +494,7 @@ export async function getCourseProgress(req: Request, res: Response) {
     // Get enrollment for this course and user
     const enrollment = await prisma.courseEnrollment.findFirst({
       where: {
-        courseId,
+        courseId: courseId || '',
         studentId: user.id
       }
     });
@@ -527,7 +532,7 @@ export async function getCourseProgress(req: Request, res: Response) {
     const totalLessons = await prisma.lesson.count({
       where: {
         module: {
-          courseId
+          courseId: courseId || ''
         }
       }
     });

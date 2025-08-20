@@ -64,7 +64,7 @@ import jwt from "jsonwebtoken";
  *               items:
  *                 $ref: '#/components/schemas/Instructor'
  */
-export async function listInstructors(req: Request, res: Response) {
+export async function listInstructors(_req: Request, res: Response) {
   try {
     const instructors = await prisma.profile.findMany({
       where: { role: 'INSTRUCTOR' },
@@ -75,10 +75,9 @@ export async function listInstructors(req: Request, res: Response) {
         lastName: true,
         email: true,
         specialization: true,
-        bio: true,
-        experience: true,
-        education: true,
-        isActive: true,
+        educationHistory: true,
+        workExperience: true,
+        active: true,
         createdAt: true,
         updatedAt: true,
         instructedCourses: {
@@ -127,7 +126,7 @@ export async function getInstructor(req: Request, res: Response) {
   try {
     const instructor = await prisma.profile.findFirst({
       where: { 
-        id: req.params.id,
+        id: req.params['id'] || '',
         role: 'INSTRUCTOR'
       },
       include: {
@@ -217,7 +216,7 @@ export async function createInstructor(req: Request, res: Response) {
       firstName,
       lastName,
       specialization,
-      bio,
+      // bio, // Removed as it doesn't exist in Profile model
       experience,
       education
     } = req.body;
@@ -273,11 +272,10 @@ export async function createInstructor(req: Request, res: Response) {
           lastName,
           email,
           specialization,
-          bio,
-          experience,
-          education,
+          workExperience: experience ? JSON.parse(experience) : null,
+          educationHistory: education ? JSON.parse(education) : null,
           role: 'INSTRUCTOR',
-          isActive: true
+          active: true
         }
       });
 
@@ -356,7 +354,6 @@ export async function updateInstructor(req: Request, res: Response) {
       lastName,
       email,
       specialization,
-      bio,
       experience,
       education,
       isActive
@@ -364,7 +361,7 @@ export async function updateInstructor(req: Request, res: Response) {
 
     const instructor = await prisma.profile.findFirst({
       where: { 
-        id: req.params.id,
+        id: req.params['id'] || '',
         role: 'INSTRUCTOR'
       }
     });
@@ -378,7 +375,7 @@ export async function updateInstructor(req: Request, res: Response) {
       const existingProfile = await prisma.profile.findFirst({
         where: { 
           email,
-          id: { not: req.params.id }
+          id: { not: req.params['id'] || '' }
         }
       });
 
@@ -390,16 +387,15 @@ export async function updateInstructor(req: Request, res: Response) {
     }
 
     const updatedInstructor = await prisma.profile.update({
-      where: { id: req.params.id },
+      where: { id: req.params['id'] || '' },
       data: {
         firstName,
         lastName,
         email,
         specialization,
-        bio,
-        experience,
-        education,
-        isActive
+        workExperience: experience ? JSON.parse(experience) : undefined,
+        educationHistory: education ? JSON.parse(education) : undefined,
+        active: isActive
       }
     });
 
@@ -437,7 +433,7 @@ export async function deleteInstructor(req: Request, res: Response) {
   try {
     const instructor = await prisma.profile.findFirst({
       where: { 
-        id: req.params.id,
+        id: req.params['id'] || '',
         role: 'INSTRUCTOR'
       },
       include: {
@@ -461,7 +457,7 @@ export async function deleteInstructor(req: Request, res: Response) {
     await prisma.$transaction(async (tx) => {
       // Delete profile
       await tx.profile.delete({
-        where: { id: req.params.id }
+        where: { id: req.params['id'] || '' }
       });
 
       // Delete user
@@ -546,7 +542,7 @@ export async function instructorLogin(req: Request, res: Response) {
       where: { userId: user.id }
     });
 
-    if (!instructor || !instructor.isActive) {
+    if (!instructor || !instructor.active) {
       return res.status(401).json({
         message: "Instructor account is inactive"
       });
@@ -560,7 +556,7 @@ export async function instructorLogin(req: Request, res: Response) {
         role: user.role,
         instructorId: instructor.id
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env['JWT_SECRET'] || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -580,10 +576,9 @@ export async function instructorLogin(req: Request, res: Response) {
         lastName: instructor.lastName,
         email: instructor.email,
         specialization: instructor.specialization,
-        bio: instructor.bio,
-        experience: instructor.experience,
-        education: instructor.education,
-        isActive: instructor.isActive
+        workExperience: instructor.workExperience,
+        educationHistory: instructor.educationHistory,
+        active: instructor.active
       }
     });
   } catch (error) {
@@ -604,7 +599,7 @@ export async function instructorLogin(req: Request, res: Response) {
  *       200:
  *         description: Instructor statistics
  */
-export async function getInstructorStats(req: Request, res: Response) {
+export async function getInstructorStats(_req: Request, res: Response) {
   try {
     const totalInstructors = await prisma.profile.count({
       where: { role: 'INSTRUCTOR' }
@@ -613,7 +608,7 @@ export async function getInstructorStats(req: Request, res: Response) {
     const activeInstructors = await prisma.profile.count({
       where: { 
         role: 'INSTRUCTOR',
-        isActive: true
+        active: true
       }
     });
 

@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 
 // Obtener conversaciones del usuario
-export async function getConversations(req: Request, res: Response) {
+export async function getConversations(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -115,7 +115,7 @@ export async function getConversations(req: Request, res: Response) {
 }
 
 // Obtener mensajes de una conversación específica
-export async function getConversationMessages(req: Request, res: Response) {
+export async function getConversationMessages(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -225,7 +225,7 @@ export async function getConversationMessages(req: Request, res: Response) {
 }
 
 // Enviar mensaje
-export async function sendMessage(req: Request, res: Response) {
+export async function sendMessage(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -317,7 +317,7 @@ export async function sendMessage(req: Request, res: Response) {
 }
 
 // Marcar mensaje como leído
-export async function markMessageAsRead(req: Request, res: Response) {
+export async function markMessageAsRead(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -379,7 +379,7 @@ export async function markMessageAsRead(req: Request, res: Response) {
 }
 
 // Obtener estadísticas de mensajería
-export async function getMessagingStats(req: Request, res: Response) {
+export async function getMessagingStats(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -431,7 +431,7 @@ export async function getMessagingStats(req: Request, res: Response) {
 }
 
 // Eliminar mensaje (solo el remitente puede eliminar)
-export async function deleteMessage(req: Request, res: Response) {
+export async function deleteMessage(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     

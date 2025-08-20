@@ -65,7 +65,7 @@ const JWT_SECRET = "supersecretkey";
  *       400:
  *         description: Missing required fields
  */
-export async function municipalityLogin(req: Request, res: Response) {
+export async function municipalityLogin(req: Request, res: Response): Promise<Response> {
   try {
     const { username, password } = req.body;
 
@@ -143,7 +143,7 @@ export async function municipalityLogin(req: Request, res: Response) {
  *       401:
  *         description: Invalid or missing token
  */
-export async function getMunicipalityProfile(req: Request, res: Response) {
+export async function getMunicipalityProfile(req: Request, res: Response): Promise<Response> {
   try {
     const municipalityId = (req as any).user?.id;
     
@@ -224,7 +224,7 @@ export async function getMunicipalityProfile(req: Request, res: Response) {
  *       400:
  *         description: Missing required fields
  */
-export async function changeMunicipalityPassword(req: Request, res: Response) {
+export async function changeMunicipalityPassword(req: Request, res: Response): Promise<Response> {
   try {
     const municipalityId = (req as any).user?.id;
     

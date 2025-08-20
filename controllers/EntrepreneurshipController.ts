@@ -29,7 +29,7 @@ import { Request, Response } from "express";
  *       200:
  *         description: List of entrepreneurships
  */
-export async function listEntrepreneurships(req: Request, res: Response) {
+export async function listEntrepreneurships(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { category, businessStage, municipality } = req.query;
@@ -121,7 +121,7 @@ export async function listEntrepreneurships(req: Request, res: Response) {
  *       404:
  *         description: Entrepreneurship not found
  */
-export async function getEntrepreneurship(req: Request, res: Response) {
+export async function getEntrepreneurship(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -194,7 +194,7 @@ export async function getEntrepreneurship(req: Request, res: Response) {
  *       401:
  *         description: Unauthorized
  */
-export async function getMyEntrepreneurships(req: Request, res: Response) {
+export async function getMyEntrepreneurships(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -289,7 +289,7 @@ export async function getMyEntrepreneurships(req: Request, res: Response) {
  *                       lastName:
  *                         type: string
  */
-export async function listPublicEntrepreneurships(req: Request, res: Response) {
+export async function listPublicEntrepreneurships(req: Request, res: Response): Promise<Response> {
   try {
     const { category, businessStage, municipality } = req.query;
     
@@ -442,7 +442,7 @@ export async function listPublicEntrepreneurships(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createEntrepreneurship(req: Request, res: Response) {
+export async function createEntrepreneurship(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -618,7 +618,7 @@ export async function createEntrepreneurship(req: Request, res: Response) {
  *       404:
  *         description: Entrepreneurship not found
  */
-export async function updateEntrepreneurship(req: Request, res: Response) {
+export async function updateEntrepreneurship(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -695,7 +695,7 @@ export async function updateEntrepreneurship(req: Request, res: Response) {
     if (businessModel !== undefined) updateData.businessModel = businessModel;
     if (targetMarket !== undefined) updateData.targetMarket = targetMarket;
     if (isPublic !== undefined) updateData.isPublic = isPublic;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isActive !== undefined) updateData.active = isActive;
     
     const updatedItem = await prisma.entrepreneurship.update({
       where: { id: id as string },
@@ -747,7 +747,7 @@ export async function updateEntrepreneurship(req: Request, res: Response) {
  *       404:
  *         description: Entrepreneurship not found
  */
-export async function deleteEntrepreneurship(req: Request, res: Response) {
+export async function deleteEntrepreneurship(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;

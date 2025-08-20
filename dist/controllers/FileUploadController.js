@@ -3,10 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadLessonVideo = exports.uploadProfileImage = void 0;
+exports.uploadCoverLetter = exports.uploadCV = exports.uploadLessonVideo = exports.uploadProfileImage = void 0;
 exports.uploadProfileImageHandler = uploadProfileImageHandler;
+exports.uploadCVHandler = uploadCVHandler;
+exports.uploadCoverLetterHandler = uploadCoverLetterHandler;
 exports.uploadLessonVideoHandler = uploadLessonVideoHandler;
 exports.serveImage = serveImage;
+exports.serveDocument = serveDocument;
 exports.serveVideo = serveVideo;
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -27,6 +30,32 @@ const imageStorage = multer_1.default.diskStorage({
 const videoStorage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
         const uploadDir = path_1.default.join(__dirname, '../uploads/videos');
+        if (!fs_1.default.existsSync(uploadDir)) {
+            fs_1.default.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
+    }
+});
+const documentStorage = multer_1.default.diskStorage({
+    destination: (_req, _file, cb) => {
+        const uploadDir = path_1.default.join(__dirname, '../uploads/documents');
+        if (!fs_1.default.existsSync(uploadDir)) {
+            fs_1.default.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
+    }
+});
+const coverLetterStorage = multer_1.default.diskStorage({
+    destination: (_req, _file, cb) => {
+        const uploadDir = path_1.default.join(__dirname, '../uploads/cover-letters');
         if (!fs_1.default.existsSync(uploadDir)) {
             fs_1.default.mkdirSync(uploadDir, { recursive: true });
         }
@@ -75,8 +104,40 @@ const videoUpload = (0, multer_1.default)({
         }
     }
 });
+const documentUpload = (0, multer_1.default)({
+    storage: documentStorage,
+    limits: {
+        fileSize: 10 * 1024 * 1024,
+    },
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = ['application/pdf'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Solo se permiten archivos PDF'));
+        }
+    }
+});
+const coverLetterUpload = (0, multer_1.default)({
+    storage: coverLetterStorage,
+    limits: {
+        fileSize: 10 * 1024 * 1024,
+    },
+    fileFilter: (_req, file, cb) => {
+        const allowedTypes = ['application/pdf'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Solo se permiten archivos PDF'));
+        }
+    }
+});
 exports.uploadProfileImage = imageUpload.single('profileImage');
 exports.uploadLessonVideo = videoUpload.single('video');
+exports.uploadCV = documentUpload.single('cvFile');
+exports.uploadCoverLetter = coverLetterUpload.single('coverLetterFile');
 async function uploadProfileImageHandler(req, res) {
     try {
         const user = req.user;
@@ -95,6 +156,60 @@ async function uploadProfileImageHandler(req, res) {
     }
     catch (error) {
         console.error("Error uploading profile image:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+async function uploadCVHandler(req, res) {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: "No CV file provided" });
+        }
+        const cvUrl = `/uploads/documents/${req.file.filename}`;
+        return res.json({
+            message: "CV uploaded successfully",
+            cvUrl: cvUrl,
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+        });
+    }
+    catch (error) {
+        console.error("Error uploading CV:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
+async function uploadCoverLetterHandler(req, res) {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: "No cover letter file provided" });
+        }
+        const coverLetterUrl = `/uploads/cover-letters/${req.file.filename}`;
+        return res.json({
+            message: "Cover letter uploaded successfully",
+            coverLetterUrl: coverLetterUrl,
+            filename: req.file.filename,
+            originalName: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+        });
+    }
+    catch (error) {
+        console.error("Error uploading cover letter:", error);
         return res.status(500).json({
             message: "Internal server error",
             error: error.message
@@ -148,6 +263,33 @@ async function serveImage(req, res) {
         });
     }
 }
+async function serveDocument(req, res) {
+    try {
+        const { filename } = req.params;
+        const { type } = req.query;
+        if (!filename) {
+            return res.status(400).json({ message: "Filename is required" });
+        }
+        let folder = 'documents';
+        if (type === 'cover-letters') {
+            folder = 'cover-letters';
+        }
+        const documentPath = path_1.default.join(__dirname, `../uploads/${folder}`, filename);
+        if (!fs_1.default.existsSync(documentPath)) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        return res.sendFile(documentPath);
+    }
+    catch (error) {
+        console.error("Error serving document:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
 async function serveVideo(req, res) {
     try {
         const { filename } = req.params;
@@ -163,7 +305,7 @@ async function serveVideo(req, res) {
         const range = req.headers.range;
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
+            const start = parseInt(parts[0] || "0", 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunksize = (end - start) + 1;
             const file = fs_1.default.createReadStream(videoPath, { start, end });
@@ -183,6 +325,7 @@ async function serveVideo(req, res) {
             };
             res.writeHead(200, head);
             fs_1.default.createReadStream(videoPath).pipe(res);
+            return;
         }
     }
     catch (error) {

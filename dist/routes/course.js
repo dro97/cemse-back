@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const CourseController = __importStar(require("../controllers/CourseController"));
 const auth_1 = require("../middleware/auth");
+const upload_1 = require("../middleware/upload");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticateToken);
 router.get("/", CourseController.listCourses);
@@ -59,8 +60,9 @@ const requireCourseCreation = (req, res, next) => {
         message: "Access denied. Only SuperAdmin, Organizations, and Municipalities can create courses"
     });
 };
-router.post("/", requireCourseCreation, CourseController.createCourse);
-router.put("/:id", requireCourseCreation, CourseController.updateCourse);
+router.post("/", requireCourseCreation, upload_1.uploadCourseFiles, CourseController.createCourse);
+router.post("/json", requireCourseCreation, CourseController.createCourse);
+router.put("/:id", requireCourseCreation, upload_1.uploadCourseFiles, CourseController.updateCourse);
 router.delete("/:id", auth_1.requireSuperAdmin, CourseController.deleteCourse);
 exports.default = router;
 //# sourceMappingURL=course.js.map

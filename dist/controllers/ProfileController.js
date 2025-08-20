@@ -6,13 +6,14 @@ exports.getProfile = getProfile;
 exports.createProfile = createProfile;
 exports.updateProfile = updateProfile;
 exports.deleteProfile = deleteProfile;
+exports.updateProfileAvatar = updateProfileAvatar;
 exports.getExternalProfile = getExternalProfile;
 const prisma_1 = require("../lib/prisma");
 const server_1 = require("../server");
 const client_1 = require("@prisma/client");
 async function listProfiles(_, res) {
     const items = await prisma_1.prisma.profile.findMany();
-    res.json(items);
+    return res.json(items);
 }
 async function getMyProfile(req, res) {
     try {
@@ -39,7 +40,7 @@ async function getMyProfile(req, res) {
 async function getProfile(req, res) {
     try {
         const user = req.user;
-        const profileId = req.params["id"];
+        const profileId = req.params['id'];
         if (!user) {
             return res.status(401).json({ message: "Authentication required" });
         }
@@ -67,22 +68,88 @@ async function createProfile(req, res) {
         data: req.body
     });
     server_1.io.emit("profile:created", newItem);
-    res.status(201).json(newItem);
+    return res.status(201).json(newItem);
 }
 async function updateProfile(req, res) {
-    const updated = await prisma_1.prisma.profile.update({
-        where: { id: req.params["id"] || "" },
-        data: req.body
-    });
-    server_1.io.emit("profile:updated", updated);
-    res.json(updated);
+    try {
+        const profileId = req.params['id'] || "";
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        const existingProfile = await prisma_1.prisma.profile.findUnique({
+            where: { id: profileId }
+        });
+        if (!existingProfile) {
+            return res.status(404).json({ message: "Profile not found" });
+        }
+        if (user.role !== 'SUPERADMIN' && existingProfile.userId !== user.id) {
+            return res.status(403).json({ message: "Access denied. You can only update your own profile" });
+        }
+        let updateData = { ...req.body };
+        if (req.file) {
+            const avatarUrl = `/uploads/profiles/${req.file.filename}`;
+            updateData.avatarUrl = avatarUrl;
+        }
+        const updated = await prisma_1.prisma.profile.update({
+            where: { id: profileId },
+            data: updateData
+        });
+        server_1.io.emit("profile:updated", updated);
+        return res.json(updated);
+    }
+    catch (error) {
+        console.error("Error updating profile:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 }
 async function deleteProfile(req, res) {
     await prisma_1.prisma.profile.delete({
-        where: { id: req.params["id"] || "" }
+        where: { id: req.params['id'] || "" }
     });
-    server_1.io.emit("profile:deleted", { id: req.params["id"] });
-    res.status(204).end();
+    server_1.io.emit("profile:deleted", { id: req.params['id'] });
+    return res.status(204).end();
+}
+async function updateProfileAvatar(req, res) {
+    try {
+        const profileId = req.params['id'] || "";
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        const existingProfile = await prisma_1.prisma.profile.findUnique({
+            where: { id: profileId }
+        });
+        if (!existingProfile) {
+            return res.status(404).json({ message: "Profile not found" });
+        }
+        if (user.role !== 'SUPERADMIN' && existingProfile.userId !== user.id) {
+            return res.status(403).json({ message: "Access denied. You can only update your own profile" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: "No avatar file uploaded" });
+        }
+        const avatarUrl = `/uploads/profiles/${req.file.filename}`;
+        const updated = await prisma_1.prisma.profile.update({
+            where: { id: profileId },
+            data: { avatarUrl }
+        });
+        server_1.io.emit("profile:avatar:updated", updated);
+        return res.json({
+            message: "Avatar updated successfully",
+            profile: updated
+        });
+    }
+    catch (error) {
+        console.error("Error updating profile avatar:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 }
 async function getExternalProfile(req, res) {
     const apiKey = req.headers["x-api-key"];

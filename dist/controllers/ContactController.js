@@ -68,8 +68,8 @@ async function searchYouthUsers(req, res) {
         }));
         const usersWithContactStatus = users.map((user, index) => ({
             ...user,
-            contactStatus: contactStatuses[index].contactStatus,
-            contactId: contactStatuses[index].contactId
+            contactStatus: contactStatuses[index]?.contactStatus,
+            contactId: contactStatuses[index]?.contactId
         }));
         return res.json({
             users: usersWithContactStatus,

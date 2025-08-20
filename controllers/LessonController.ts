@@ -184,9 +184,9 @@ export async function listLessons(_req: Request, res: Response) {
  *       404:
  *         description: Lesson not found
  */
-export async function getLesson(req: Request, res: Response) {
+export async function getLesson(req: Request, res: Response): Promise<Response> {
   const item = await prisma.lesson.findUnique({
-    where: { id: req.params["id"] || "" },
+    where: { id: req.params['id'] || "" },
     include: {
       module: {
         include: {
@@ -274,8 +274,8 @@ export async function createLesson(req: RequestWithUploadedFiles, res: Response)
         url: file.url,
         filename: file.filename,
         originalName: file.originalName,
-        size: file.size,
-        mimetype: file.mimetype
+        size: file?.size,
+        mimetype: file?.mimetype
       }));
       console.log('📎 [DEBUG] Attachments procesados:', finalAttachments.length);
     }
@@ -356,7 +356,7 @@ export async function createLesson(req: RequestWithUploadedFiles, res: Response)
  *       404:
  *         description: Lesson not found
  */
-export async function updateLesson(req: Request, res: Response) {
+export async function updateLesson(req: Request, res: Response): Promise<Response> {
   const { 
     title, 
     description,
@@ -397,14 +397,14 @@ export async function updateLesson(req: Request, res: Response) {
   }
 
   const updated = await prisma.lesson.update({
-    where: { id: req.params["id"] || "" },
+    where: { id: req.params['id'] || "" },
     data: updateData
   });
   
   // Emit real-time update
   io.emit("lesson:updated", updated);
   
-  res.json(updated);
+  return res.json(updated);
 }
 
 /**
@@ -426,13 +426,13 @@ export async function updateLesson(req: Request, res: Response) {
  *       404:
  *         description: Lesson not found
  */
-export async function deleteLesson(req: Request, res: Response) {
+export async function deleteLesson(req: Request, res: Response): Promise<Response> {
   await prisma.lesson.delete({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   
   // Emit real-time update
-  io.emit("lesson:deleted", { id: req.params["id"] });
+  io.emit("lesson:deleted", { id: req.params['id'] });
   
   return res.status(204).end();
 }
@@ -460,7 +460,7 @@ export async function deleteLesson(req: Request, res: Response) {
  *               items:
  *                 $ref: '#/components/schemas/Lesson'
  */
-export async function getLessonsByModule(req: Request, res: Response) {
+export async function getLessonsByModule(req: Request, res: Response): Promise<Response> {
   const moduleId = req.params["moduleId"];
   
   if (!moduleId) {
@@ -468,7 +468,7 @@ export async function getLessonsByModule(req: Request, res: Response) {
   }
 
   const lessons = await prisma.lesson.findMany({
-    where: { moduleId },
+    where: { moduleId: moduleId || '' },
     orderBy: { orderIndex: 'asc' },
     include: {
       module: {

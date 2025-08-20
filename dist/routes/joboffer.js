@@ -58,8 +58,8 @@ const requireJobOfferCreation = (req, res, next) => {
         message: "Access denied. Only SuperAdmin, Organizations, and Companies can create job offers"
     });
 };
-router.post("/", requireJobOfferCreation, JobOfferController.createJobOffer);
-router.put("/:id", requireJobOfferCreation, JobOfferController.updateJobOffer);
+router.post("/", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.createJobOffer);
+router.put("/:id", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.updateJobOffer);
 router.delete("/:id", auth_1.requireSuperAdmin, JobOfferController.deleteJobOffer);
 exports.default = router;
 //# sourceMappingURL=joboffer.js.map

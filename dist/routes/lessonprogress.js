@@ -43,5 +43,6 @@ router.get("/:id", LessonProgressController.getLessonProgress);
 router.post("/", auth_1.requireStudent, LessonProgressController.createLessonProgress);
 router.put("/:id", LessonProgressController.updateLessonProgress);
 router.delete("/:id", LessonProgressController.deleteLessonProgress);
+router.get("/course/:courseId", LessonProgressController.getCourseProgress);
 exports.default = router;
 //# sourceMappingURL=lessonprogress.js.map

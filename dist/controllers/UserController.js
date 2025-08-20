@@ -33,7 +33,7 @@ async function updateUser(req, res) {
     if (!id)
         return res.status(400).json({ error: "Missing id" });
     try {
-        const updated = await prisma_1.prisma.user.update({ where: { id }, data: req.body });
+        const updated = await prisma_1.prisma.user.update({ where: { id: id || '' }, data: req.body });
         return res.json(updated);
     }
     catch (e) {

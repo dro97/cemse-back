@@ -6,7 +6,7 @@ export async function listStudentNotes(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getStudentNote(req: Request, res: Response) {
+export async function getStudentNote(req: Request, res: Response): Promise<Response> {
   const item = await prisma.studentNote.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,14 +14,14 @@ export async function getStudentNote(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createStudentNote(req: Request, res: Response) {
+export async function createStudentNote(req: Request, res: Response): Promise<Response> {
   const newItem = await prisma.studentNote.create({
     data: req.body
   });
   return res.status(201).json(newItem);
 }
 
-export async function updateStudentNote(req: Request, res: Response) {
+export async function updateStudentNote(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.studentNote.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -29,7 +29,7 @@ export async function updateStudentNote(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteStudentNote(req: Request, res: Response) {
+export async function deleteStudentNote(req: Request, res: Response): Promise<Response> {
   await prisma.studentNote.delete({
     where: { id: req.params['id'] || '' }
   });

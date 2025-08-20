@@ -43,5 +43,6 @@ router.get("/:id", QuizAttemptController.getQuizAttempt);
 router.post("/", auth_1.requireStudent, QuizAttemptController.createQuizAttempt);
 router.put("/:id", QuizAttemptController.updateQuizAttempt);
 router.delete("/:id", QuizAttemptController.deleteQuizAttempt);
+router.post("/complete", auth_1.requireStudent, QuizAttemptController.completeQuiz);
 exports.default = router;
 //# sourceMappingURL=quizattempt.js.map

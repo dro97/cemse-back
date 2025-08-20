@@ -147,9 +147,9 @@ export async function listCourses(_req: Request, res: Response) {
  *       404:
  *         description: Course not found
  */
-export async function getCourse(req: Request, res: Response) {
+export async function getCourse(req: Request, res: Response): Promise<Response> {
   const item = await prisma.course.findUnique({
-    where: { id: req.params["id"] || "" },
+    where: { id: req.params['id'] || "" },
     include: {
       modules: {
         include: {
@@ -204,9 +204,9 @@ export async function getCourse(req: Request, res: Response) {
  *       404:
  *         description: Course not found
  */
-export async function getCoursePreview(req: Request, res: Response) {
+export async function getCoursePreview(req: Request, res: Response): Promise<Response> {
   try {
-    const courseId = req.params["id"] || "";
+    const courseId = req.params['id'] || "";
     
     // Obtener información básica del curso
     const course = await prisma.course.findUnique({
@@ -397,7 +397,7 @@ export async function getCoursePreview(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createCourse(req: Request, res: Response) {
+export async function createCourse(req: Request, res: Response): Promise<Response> {
   try {
     const {
       title,
@@ -561,9 +561,9 @@ export async function createCourse(req: Request, res: Response) {
  *       404:
  *         description: Course not found
  */
-export async function updateCourse(req: Request, res: Response) {
+export async function updateCourse(req: Request, res: Response): Promise<Response> {
   try {
-    const courseId = req.params["id"] || "";
+    const courseId = req.params['id'] || "";
     
     // Check if course exists
     const existingCourse = await prisma.course.findUnique({
@@ -635,13 +635,13 @@ export async function updateCourse(req: Request, res: Response) {
  *       404:
  *         description: Course not found
  */
-export async function deleteCourse(req: Request, res: Response) {
+export async function deleteCourse(req: Request, res: Response): Promise<Response> {
   await prisma.course.delete({
-    where: { id: req.params["id"] || "" }
+    where: { id: req.params['id'] || "" }
   });
   
   // Emit real-time update
-  io.emit("course:deleted", { id: req.params["id"] });
+  io.emit("course:deleted", { id: req.params['id'] });
   
   return res.status(204).end();
 }

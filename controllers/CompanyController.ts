@@ -71,7 +71,7 @@ import { UserRole } from "@prisma/client";
  *               items:
  *                 $ref: '#/components/schemas/Company'
  */
-export async function listCompanies(req: Request, res: Response) {
+export async function listCompanies(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -215,7 +215,7 @@ export async function listCompanies(req: Request, res: Response) {
  *                   type: object
  *                   description: Applied filters
  */
-export async function searchCompanies(req: Request, res: Response) {
+export async function searchCompanies(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const {
@@ -325,7 +325,7 @@ export async function searchCompanies(req: Request, res: Response) {
 
     // Get unique municipalities for filter options
     const municipalities = await prisma.municipality.findMany({
-      where: { isActive: true },
+      where: { isActive: true as any },
       select: { id: true, name: true, department: true },
       orderBy: { name: 'asc' }
     });
@@ -374,7 +374,7 @@ export async function searchCompanies(req: Request, res: Response) {
  *       200:
  *         description: User authentication info
  */
-export async function testAuth(req: Request, res: Response) {
+export async function testAuth(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     console.log("Test auth - User object:", user);
@@ -430,7 +430,7 @@ export async function testAuth(req: Request, res: Response) {
  *                 totalRevenue:
  *                   type: number
  */
-export async function getCompanyStats(req: Request, res: Response) {
+export async function getCompanyStats(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -504,7 +504,7 @@ export async function getCompanyStats(req: Request, res: Response) {
  *       404:
  *         description: Company not found
  */
-export async function getCompany(req: Request, res: Response) {
+export async function getCompany(req: Request, res: Response): Promise<Response> {
   try {
     const { id } = req.params;
     if (!id) {
@@ -512,7 +512,7 @@ export async function getCompany(req: Request, res: Response) {
     }
 
     const company = await prisma.company.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         municipality: {
           select: {
@@ -625,7 +625,7 @@ export async function getCompany(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createCompany(req: Request, res: Response) {
+export async function createCompany(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is Municipal Government, Municipality, or SuperAdmin
     const user = (req as any).user;
@@ -870,7 +870,7 @@ export async function createCompany(req: Request, res: Response) {
  *       404:
  *         description: Company not found
  */
-export async function updateCompany(req: Request, res: Response) {
+export async function updateCompany(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is Municipal Government, Municipality, or SuperAdmin
     const user = (req as any).user;
@@ -909,7 +909,7 @@ export async function updateCompany(req: Request, res: Response) {
     } = req.body;
 
     const company = await prisma.company.update({
-      where: { id },
+      where: { id: id || '' },
       data: {
         name,
         description,
@@ -979,7 +979,7 @@ export async function updateCompany(req: Request, res: Response) {
  *       404:
  *         description: Company not found
  */
-export async function deleteCompany(req: Request, res: Response) {
+export async function deleteCompany(req: Request, res: Response): Promise<Response> {
   try {
     // Check if user is Municipal Government, Municipality, or SuperAdmin
     const user = (req as any).user;
@@ -1003,7 +1003,7 @@ export async function deleteCompany(req: Request, res: Response) {
 
     // Check if company has active job offers
     const company = await prisma.company.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         jobOffers: {
           where: { isActive: true }

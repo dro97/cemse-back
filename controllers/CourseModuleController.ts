@@ -6,7 +6,7 @@ export async function listCourseModules(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getCourseModule(req: Request, res: Response) {
+export async function getCourseModule(req: Request, res: Response): Promise<Response> {
   const item = await prisma.courseModule.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,7 +14,7 @@ export async function getCourseModule(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createCourseModule(req: Request, res: Response) {
+export async function createCourseModule(req: Request, res: Response): Promise<Response> {
   try {
     console.log('🔍 [DEBUG] createCourseModule - req.body:', req.body);
     
@@ -68,7 +68,7 @@ export async function createCourseModule(req: Request, res: Response) {
   }
 }
 
-export async function updateCourseModule(req: Request, res: Response) {
+export async function updateCourseModule(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.courseModule.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -76,7 +76,7 @@ export async function updateCourseModule(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteCourseModule(req: Request, res: Response) {
+export async function deleteCourseModule(req: Request, res: Response): Promise<Response> {
   await prisma.courseModule.delete({
     where: { id: req.params['id'] || '' }
   });

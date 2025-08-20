@@ -446,7 +446,7 @@ async function authMiddleware(req: Request, res: Response, next: NextFunction): 
  *         description: Invalid or missing token
  */
 router.get("/me", authMiddleware, (req: Request, res: Response) => {
-  res.json({ user: (req as any).user });
+  return res.json({ user: (req as any).user });
 });
 
 /**
@@ -479,9 +479,9 @@ router.get("/check-role/:role", authMiddleware, (req: Request, res: Response) =>
   const { role } = req.params;
   const user = (req as any).user;
   if (user && user.role === role) {
-    res.json({ allowed: true });
+    return res.json({ allowed: true });
   } else {
-    res.json({ allowed: false });
+    return res.json({ allowed: false });
   }
 });
 

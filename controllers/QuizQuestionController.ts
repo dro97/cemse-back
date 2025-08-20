@@ -6,7 +6,7 @@ export async function listQuizQuestions(_req: Request, res: Response) {
   return res.json(items);
 }
 
-export async function getQuizQuestion(req: Request, res: Response) {
+export async function getQuizQuestion(req: Request, res: Response): Promise<Response> {
   const item = await prisma.quizQuestion.findUnique({
     where: { id: req.params['id'] || '' }
   });
@@ -14,14 +14,14 @@ export async function getQuizQuestion(req: Request, res: Response) {
   return res.json(item);
 }
 
-export async function createQuizQuestion(req: Request, res: Response) {
+export async function createQuizQuestion(req: Request, res: Response): Promise<Response> {
   const newItem = await prisma.quizQuestion.create({
     data: req.body
   });
   return res.status(201).json(newItem);
 }
 
-export async function updateQuizQuestion(req: Request, res: Response) {
+export async function updateQuizQuestion(req: Request, res: Response): Promise<Response> {
   const updated = await prisma.quizQuestion.update({
     where: { id: req.params['id'] || '' },
     data: req.body
@@ -29,7 +29,7 @@ export async function updateQuizQuestion(req: Request, res: Response) {
   return res.json(updated);
 }
 
-export async function deleteQuizQuestion(req: Request, res: Response) {
+export async function deleteQuizQuestion(req: Request, res: Response): Promise<Response> {
   await prisma.quizQuestion.delete({
     where: { id: req.params['id'] || '' }
   });

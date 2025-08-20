@@ -12,7 +12,7 @@ async function listCertificates(_req, res) {
 }
 async function getCertificate(req, res) {
     const item = await prisma_1.prisma.certificate.findUnique({
-        where: { id: req.params["id"] || "" }
+        where: { id: req.params['id'] || "" }
     });
     if (!item)
         return res.status(404).json({ message: "Not found" });
@@ -38,14 +38,14 @@ async function createCertificate(req, res) {
 }
 async function updateCertificate(req, res) {
     const updated = await prisma_1.prisma.certificate.update({
-        where: { id: req.params["id"] || "" },
+        where: { id: req.params['id'] || "" },
         data: req.body
     });
     return res.json(updated);
 }
 async function deleteCertificate(req, res) {
     await prisma_1.prisma.certificate.delete({
-        where: { id: req.params["id"] || "" }
+        where: { id: req.params['id'] || "" }
     });
     return res.status(204).end();
 }

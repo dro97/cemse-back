@@ -11,6 +11,16 @@ router.use(auth_1.authenticateToken);
 router.post("/upload/profile-image", FileUploadController_1.uploadProfileImage, FileUploadController_1.uploadProfileImageHandler);
 router.post("/upload/lesson-video", auth_1.requireOrganization, FileUploadController_1.uploadLessonVideo, FileUploadController_1.uploadLessonVideoHandler);
 router.get("/images/:filename", FileUploadController_1.serveImage);
+router.post("/upload/cv", FileUploadController_1.uploadCV, FileUploadController_1.uploadCVHandler);
+router.post("/upload/cover-letter", FileUploadController_1.uploadCoverLetter, FileUploadController_1.uploadCoverLetterHandler);
 router.get("/videos/:filename", FileUploadController_1.serveVideo);
+router.get("/documents/:filename", (req, res) => {
+    req.query.type = 'documents';
+    (0, FileUploadController_1.serveDocument)(req, res);
+});
+router.get("/cover-letters/:filename", (req, res) => {
+    req.query.type = 'cover-letters';
+    (0, FileUploadController_1.serveDocument)(req, res);
+});
 exports.default = router;
 //# sourceMappingURL=fileUpload.js.map

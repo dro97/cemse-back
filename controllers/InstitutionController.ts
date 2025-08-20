@@ -173,14 +173,8 @@ export async function getInstitution(req: Request, res: Response) {
             role: true
           }
         },
-        companies: {
-          where: { isActive: true },
-          select: {
-            id: true,
-            name: true,
-            businessSector: true
-          }
-        }
+        // Note: Institution model doesn't have companies field
+        // Companies are related to Municipality model
       }
     });
 

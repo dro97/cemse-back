@@ -211,16 +211,16 @@ async function authMiddleware(req, res, next) {
     }
 }
 router.get("/me", authMiddleware, (req, res) => {
-    res.json({ user: req.user });
+    return res.json({ user: req.user });
 });
 router.get("/check-role/:role", authMiddleware, (req, res) => {
     const { role } = req.params;
     const user = req.user;
     if (user && user.role === role) {
-        res.json({ allowed: true });
+        return res.json({ allowed: true });
     }
     else {
-        res.json({ allowed: false });
+        return res.json({ allowed: false });
     }
 });
 router.get("/users", authMiddleware, async (req, res) => {

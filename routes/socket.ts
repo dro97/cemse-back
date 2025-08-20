@@ -48,7 +48,7 @@ const router = Router();
  */
 router.get("/status", (_req, res) => {
   const connections = io.engine.clientsCount;
-  res.json({
+  return res.json({
     status: "running",
     connections,
     events: [

@@ -53,7 +53,7 @@ import { Request, Response } from "express";
  *       200:
  *         description: List of module certificates
  */
-export async function listModuleCertificates(req: Request, res: Response) {
+export async function listModuleCertificates(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { moduleId, studentId } = req.query;
@@ -132,13 +132,13 @@ export async function listModuleCertificates(req: Request, res: Response) {
  *       404:
  *         description: Module certificate not found
  */
-export async function getModuleCertificate(req: Request, res: Response) {
+export async function getModuleCertificate(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
     
     const certificate = await prisma.moduleCertificate.findUnique({
-      where: { id },
+      where: { id: id || '' },
       include: {
         module: {
           select: {
@@ -213,7 +213,7 @@ export async function getModuleCertificate(req: Request, res: Response) {
  *       201:
  *         description: Module certificate created successfully
  */
-export async function createModuleCertificate(req: Request, res: Response) {
+export async function createModuleCertificate(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -340,7 +340,7 @@ export async function createModuleCertificate(req: Request, res: Response) {
  *       404:
  *         description: Module certificate not found
  */
-export async function updateModuleCertificate(req: Request, res: Response) {
+export async function updateModuleCertificate(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -356,7 +356,7 @@ export async function updateModuleCertificate(req: Request, res: Response) {
     
     // Check if certificate exists
     const existingCertificate = await prisma.moduleCertificate.findUnique({
-      where: { id }
+      where: { id: id || '' }
     });
     
     if (!existingCertificate) {
@@ -371,7 +371,7 @@ export async function updateModuleCertificate(req: Request, res: Response) {
     if (grade !== undefined) updateData.grade = grade;
     
     const certificate = await prisma.moduleCertificate.update({
-      where: { id },
+      where: { id: id || '' },
       data: updateData,
       include: {
         module: {
@@ -427,7 +427,7 @@ export async function updateModuleCertificate(req: Request, res: Response) {
  *       404:
  *         description: Module certificate not found
  */
-export async function deleteModuleCertificate(req: Request, res: Response) {
+export async function deleteModuleCertificate(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -443,7 +443,7 @@ export async function deleteModuleCertificate(req: Request, res: Response) {
     
     // Check if certificate exists
     const certificate = await prisma.moduleCertificate.findUnique({
-      where: { id }
+      where: { id: id || '' }
     });
     
     if (!certificate) {
@@ -451,7 +451,7 @@ export async function deleteModuleCertificate(req: Request, res: Response) {
     }
     
     await prisma.moduleCertificate.delete({
-      where: { id }
+      where: { id: id || '' }
     });
     
     return res.json({ message: "Module certificate deleted successfully" });

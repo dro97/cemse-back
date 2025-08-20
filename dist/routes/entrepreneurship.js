@@ -5,8 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const EntrepreneurshipController_1 = require("../controllers/EntrepreneurshipController");
+const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
+router.get("/public", EntrepreneurshipController_1.listPublicEntrepreneurships);
+router.use(auth_1.authenticateToken);
 router.get("/", EntrepreneurshipController_1.listEntrepreneurships);
+router.get("/my", EntrepreneurshipController_1.getMyEntrepreneurships);
 router.get("/:id", EntrepreneurshipController_1.getEntrepreneurship);
 router.post("/", EntrepreneurshipController_1.createEntrepreneurship);
 router.put("/:id", EntrepreneurshipController_1.updateEntrepreneurship);

@@ -65,7 +65,7 @@ const JWT_SECRET = "supersecretkey";
  *       400:
  *         description: Missing required fields
  */
-export async function companyLogin(req: Request, res: Response) {
+export async function companyLogin(req: Request, res: Response): Promise<Response> {
   try {
     const { username, password } = req.body;
 
@@ -143,7 +143,7 @@ export async function companyLogin(req: Request, res: Response) {
  *       401:
  *         description: Invalid or missing token
  */
-export async function getCompanyProfile(req: Request, res: Response) {
+export async function getCompanyProfile(req: Request, res: Response): Promise<Response> {
   try {
     const companyId = (req as any).user?.id;
     
@@ -238,7 +238,7 @@ export async function getCompanyProfile(req: Request, res: Response) {
  *       400:
  *         description: Missing required fields
  */
-export async function changeCompanyPassword(req: Request, res: Response) {
+export async function changeCompanyPassword(req: Request, res: Response): Promise<Response> {
   try {
     const companyId = (req as any).user?.id;
     

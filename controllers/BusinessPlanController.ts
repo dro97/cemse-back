@@ -75,7 +75,7 @@ import { Request, Response } from "express";
  *       404:
  *         description: No business plan found for the user
  */
-export async function getLatestBusinessPlan(req: Request, res: Response) {
+export async function getLatestBusinessPlan(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -130,7 +130,7 @@ export async function getLatestBusinessPlan(req: Request, res: Response) {
  *               items:
  *                 $ref: '#/components/schemas/BusinessPlan'
  */
-export async function listAllBusinessPlans(req: Request, res: Response) {
+export async function listAllBusinessPlans(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     
@@ -190,7 +190,7 @@ export async function listAllBusinessPlans(req: Request, res: Response) {
  *       404:
  *         description: Business plan not found
  */
-export async function getBusinessPlan(req: Request, res: Response) {
+export async function getBusinessPlan(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -252,7 +252,7 @@ export async function getBusinessPlan(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createBusinessPlan(req: Request, res: Response) {
+export async function createBusinessPlan(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { entrepreneurshipId } = req.body;
@@ -341,7 +341,7 @@ export async function createBusinessPlan(req: Request, res: Response) {
  *       404:
  *         description: Business plan not found
  */
-export async function updateBusinessPlan(req: Request, res: Response) {
+export async function updateBusinessPlan(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -409,7 +409,7 @@ export async function updateBusinessPlan(req: Request, res: Response) {
  *       404:
  *         description: Business plan not found
  */
-export async function deleteBusinessPlan(req: Request, res: Response) {
+export async function deleteBusinessPlan(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -472,7 +472,7 @@ export async function deleteBusinessPlan(req: Request, res: Response) {
  *       403:
  *         description: Access denied
  */
-export async function getBusinessPlanByEntrepreneurship(req: Request, res: Response) {
+export async function getBusinessPlanByEntrepreneurship(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { entrepreneurshipId } = req.params;
@@ -580,7 +580,7 @@ export async function getBusinessPlanByEntrepreneurship(req: Request, res: Respo
  *       403:
  *         description: Access denied
  */
-export async function saveBusinessPlanSimulator(req: Request, res: Response) {
+export async function saveBusinessPlanSimulator(req: Request, res: Response): Promise<Response> {
   try {
     console.log('=== BusinessPlanSimulator Debug ===');
     console.log('Headers:', req.headers);
@@ -617,18 +617,18 @@ export async function saveBusinessPlanSimulator(req: Request, res: Response) {
       currentStep,
       completionPercentage,
       isCompleted,
-      tags,
+      // tags,
       isPublic,
-      attachments,
-      helpResources
+      // attachments,
+      // helpResources
     } = req.body;
 
     // Map frontend fields to backend fields
     const mappedExecutiveSummary = executiveSummary || businessDescription || "";
     const mappedMarketingStrategy = marketingPlan || "";
     const mappedRevenueProjection = financialProjections || null;
-    const mappedBusinessDescription = businessDescription || "";
-    const mappedMarketingPlan = marketingPlan || "";
+    // // const mappedBusinessDescription = businessDescription || "";
+    // // const mappedMarketingPlan = marketingPlan || "";
 
     // Validate minimum required fields according to frontend specification
     console.log('🔍 Validating tripleImpactAssessment:', !!tripleImpactAssessment);

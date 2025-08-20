@@ -31,7 +31,7 @@ import { getFileUrl, deleteFile } from "../middleware/upload";
  *       200:
  *         description: List of news articles
  */
-export async function listNewsArticles(req: Request, res: Response) {
+export async function listNewsArticles(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { status, category, authorType, authorId } = req.query;
@@ -202,7 +202,7 @@ export async function listNewsArticles(req: Request, res: Response) {
  *                     hasPrev:
  *                       type: boolean
  */
-export async function listPublicNewsArticles(req: Request, res: Response) {
+export async function listPublicNewsArticles(req: Request, res: Response): Promise<Response> {
   try {
     const { 
       category, 
@@ -329,7 +329,7 @@ export async function listPublicNewsArticles(req: Request, res: Response) {
  *       404:
  *         description: News article not found
  */
-export async function getNewsArticle(req: Request, res: Response) {
+export async function getNewsArticle(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -465,7 +465,7 @@ export async function getNewsArticle(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createNewsArticle(req: Request, res: Response) {
+export async function createNewsArticle(req: Request, res: Response): Promise<Response> {
   try {
     console.log('=== AUTH DEBUG ===');
     console.log('User object:', JSON.stringify((req as any).user, null, 2));
@@ -491,7 +491,7 @@ export async function createNewsArticle(req: Request, res: Response) {
     console.log('req.body:', JSON.stringify(req.body, null, 2));
     console.log('req.files:', JSON.stringify(req.files, null, 2));
     console.log('formData:', JSON.stringify(formData, null, 2));
-    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Content-Type:', (req as any).get('Content-Type'));
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
     console.log('Method:', req.method);
     console.log('URL:', req.url);
@@ -695,7 +695,7 @@ export async function createNewsArticle(req: Request, res: Response) {
  *       404:
  *         description: News article not found
  */
-export async function updateNewsArticle(req: Request, res: Response) {
+export async function updateNewsArticle(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -858,7 +858,7 @@ export async function updateNewsArticle(req: Request, res: Response) {
  *       404:
  *         description: News article not found
  */
-export async function deleteNewsArticle(req: Request, res: Response) {
+export async function deleteNewsArticle(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;

@@ -2,7 +2,7 @@
 FROM node:18-alpine
 
 # Install development dependencies
-RUN apk add --no-cache libc6-compat wget
+RUN apk add --no-cache libc6-compat wget curl
 
 WORKDIR /app
 
@@ -20,9 +20,9 @@ RUN npx prisma generate
 
 # Create necessary directories
 RUN mkdir -p logs uploads
-
-# Set permissions
 RUN chown -R node:node /app
+
+# Switch to non-root user
 USER node
 
 EXPOSE 3001

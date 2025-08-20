@@ -224,13 +224,20 @@ export async function createLessonResource(req: Request, res: Response) {
       return res.status(403).json({ message: "Access denied. Only instructors and organizations can create lesson resources" });
     }
     
-    const { lessonId, title, description, type, orderIndex, isDownloadable } = req.body;
+    // Debug: Log the request body and files
+    console.log('🔍 [DEBUG] req.body:', req.body);
+    console.log('📁 [DEBUG] req.files:', req.files);
+    console.log('📋 [DEBUG] req.uploadedResource:', req.uploadedResource);
+    
+    const { lessonId, title, description, type, orderIndex, isDownloadable } = req.body || {};
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } || {};
     
     // Validate required fields
     if (!lessonId || !title || !type) {
+      console.log('❌ [DEBUG] Missing required fields:', { lessonId, title, type });
       return res.status(400).json({ 
-        message: "Lesson ID, title, and type are required" 
+        message: "Lesson ID, title, and type are required",
+        received: { lessonId, title, type }
       });
     }
     
@@ -247,8 +254,16 @@ export async function createLessonResource(req: Request, res: Response) {
     let filePath = '';
     let fileSize = 0;
     
-    // Handle file upload if provided
-    if (files['file'] && files['file'][0]) {
+    // Handle file upload from MinIO if provided
+    if (req.uploadedResource) {
+      console.log('🎥 [DEBUG] Procesando req.uploadedResource');
+      fileUrl = req.uploadedResource.url;
+      filePath = req.uploadedResource.filename; // Store filename instead of path for MinIO
+      fileSize = req.uploadedResource.size;
+      console.log('🎥 [DEBUG] Resource URL desde uploadedResource:', fileUrl);
+    } else if (files['file'] && files['file'][0]) {
+      // Fallback to local file if MinIO upload failed
+      console.log('⚠️ [DEBUG] Fallback a archivo local');
       const file = files['file'][0];
       fileUrl = `/uploads/resources/${file.filename}`;
       filePath = file.path;
@@ -294,7 +309,16 @@ export async function createLessonResource(req: Request, res: Response) {
       }
     });
     
-    return res.status(201).json(resource);
+    return res.status(201).json({
+      ...resource,
+      uploadedFile: req.uploadedResource ? {
+        url: req.uploadedResource.url,
+        filename: req.uploadedResource.filename,
+        originalName: req.uploadedResource.originalName,
+        size: req.uploadedResource.size,
+        mimetype: req.uploadedResource.mimetype
+      } : undefined
+    });
   } catch (error: any) {
     console.error("Error creating lesson resource:", error);
     return res.status(500).json({ 
@@ -378,8 +402,15 @@ export async function updateLessonResource(req: Request, res: Response) {
     if (orderIndex !== undefined) updateData.orderIndex = parseInt(orderIndex);
     if (isDownloadable !== undefined) updateData.isDownloadable = isDownloadable === 'true' || isDownloadable === true;
     
-    // Handle file upload if provided
-    if (files['file'] && files['file'][0]) {
+    // Handle file upload from MinIO if provided
+    if (req.uploadedResource) {
+      console.log('🎥 [DEBUG] Procesando actualización con MinIO');
+      updateData.url = req.uploadedResource.url;
+      updateData.filePath = req.uploadedResource.filename; // Store filename instead of path for MinIO
+      updateData.fileSize = req.uploadedResource.size;
+    } else if (files['file'] && files['file'][0]) {
+      // Fallback to local file if MinIO upload failed
+      console.log('⚠️ [DEBUG] Fallback a archivo local para actualización');
       const file = files['file'][0];
       updateData.url = `/uploads/resources/${file.filename}`;
       updateData.filePath = file.path;
@@ -411,7 +442,16 @@ export async function updateLessonResource(req: Request, res: Response) {
       }
     });
     
-    return res.json(resource);
+    return res.json({
+      ...resource,
+      uploadedFile: req.uploadedResource ? {
+        url: req.uploadedResource.url,
+        filename: req.uploadedResource.filename,
+        originalName: req.uploadedResource.originalName,
+        size: req.uploadedResource.size,
+        mimetype: req.uploadedResource.mimetype
+      } : undefined
+    });
   } catch (error: any) {
     console.error("Error updating lesson resource:", error);
     return res.status(500).json({ 
@@ -464,8 +504,18 @@ export async function deleteLessonResource(req: Request, res: Response) {
       return res.status(404).json({ message: "Lesson resource not found" });
     }
     
-    // Delete the file if it exists
-    if (resource.filePath) {
+    // Delete the file from MinIO if it exists
+    if (resource.filePath && resource.filePath.includes('lesson-resource-')) {
+      try {
+        const { deleteFromMinio } = require('../lib/minio');
+        await deleteFromMinio(resource.filePath, 'resources');
+        console.log('🗑️ [DEBUG] Archivo eliminado de MinIO:', resource.filePath);
+      } catch (error) {
+        console.error('⚠️ [WARNING] Error deleting file from MinIO:', error);
+        // Continue with deletion even if MinIO deletion fails
+      }
+    } else if (resource.filePath) {
+      // Fallback to local file deletion
       const fs = require('fs');
       if (fs.existsSync(resource.filePath)) {
         fs.unlinkSync(resource.filePath);

@@ -205,29 +205,118 @@ export async function getCourse(req: Request, res: Response) {
  *         description: Course not found
  */
 export async function getCoursePreview(req: Request, res: Response) {
-  const item = await prisma.course.findUnique({
-    where: { id: req.params["id"] || "" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      shortDescription: true,
-      thumbnail: true,
-      videoPreview: true,
-      duration: true,
-      level: true,
-      category: true,
-      price: true,
-      rating: true,
-      studentsCount: true,
-      totalLessons: true,
-      tags: true,
-      certification: true,
-      institutionName: true,
-    },
-  });
-  if (!item) return res.status(404).json({ message: "Course not found" });
-  return res.json(item);
+  try {
+    const courseId = req.params["id"] || "";
+    
+    // Obtener información básica del curso
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        shortDescription: true,
+        thumbnail: true,
+        videoPreview: true,
+        duration: true,
+        level: true,
+        category: true,
+        price: true,
+        rating: true,
+        tags: true,
+        certification: true,
+        institutionName: true,
+      },
+    });
+    
+    if (!course) return res.status(404).json({ message: "Course not found" });
+    
+    // Calcular estadísticas en tiempo real
+    const [
+      studentsCount,
+      totalLessons,
+      totalQuizzes,
+      totalResources,
+      completionRate
+    ] = await Promise.all([
+      // Contar estudiantes inscritos
+      prisma.courseEnrollment.count({
+        where: { courseId: courseId }
+      }),
+      
+      // Contar total de lecciones
+      prisma.lesson.count({
+        where: {
+          module: {
+            courseId: courseId
+          }
+        }
+      }),
+      
+      // Contar total de quizzes
+      prisma.quiz.count({
+        where: {
+          OR: [
+            { courseId: courseId },
+            {
+              lesson: {
+                module: {
+                  courseId: courseId
+                }
+              }
+            }
+          ]
+        }
+      }),
+      
+      // Contar total de recursos
+      prisma.lessonResource.count({
+        where: {
+          lesson: {
+            module: {
+              courseId: courseId
+            }
+          }
+        }
+      }),
+      
+      // Calcular tasa de finalización
+      (async () => {
+        const totalEnrollments = await prisma.courseEnrollment.count({
+          where: { courseId: courseId }
+        });
+        
+        if (totalEnrollments === 0) return 0;
+        
+        const completedEnrollments = await prisma.courseEnrollment.count({
+          where: { 
+            courseId: courseId,
+            status: "COMPLETED"
+          }
+        });
+        
+        return Math.round((completedEnrollments / totalEnrollments) * 100);
+      })()
+    ]);
+    
+    // Combinar datos del curso con estadísticas calculadas
+    const courseWithStats = {
+      ...course,
+      studentsCount,
+      totalLessons,
+      totalQuizzes,
+      totalResources,
+      completionRate
+    };
+    
+    return res.json(courseWithStats);
+      } catch (error) {
+      console.error('Error getting course preview:', error);
+      return res.status(500).json({ 
+        message: "Internal server error",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
 }
 
 /**

@@ -16,7 +16,8 @@ export const BUCKETS = {
   IMAGES: 'images',
   DOCUMENTS: 'documents',
   COURSES: 'courses',
-  LESSONS: 'lessons'
+  LESSONS: 'lessons',
+  RESOURCES: 'resources'
 } as const;
 
 // Inicializar buckets si no existen
@@ -29,9 +30,11 @@ export async function initializeBuckets() {
       if (!exists) {
         await minioClient.makeBucket(bucketName, 'us-east-1');
         console.log(`✅ Bucket '${bucketName}' creado exitosamente`);
-        
-        // Configurar política pública para videos e imágenes
-        if (bucketName === BUCKETS.VIDEOS || bucketName === BUCKETS.IMAGES) {
+      }
+      
+      // Configurar política pública para videos, imágenes y recursos (siempre)
+      if (bucketName === BUCKETS.VIDEOS || bucketName === BUCKETS.IMAGES || bucketName === BUCKETS.RESOURCES) {
+        try {
           const policy = {
             Version: '2012-10-17',
             Statement: [
@@ -46,6 +49,8 @@ export async function initializeBuckets() {
           
           await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
           console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
+        } catch (policyError) {
+          console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, policyError.message);
         }
       }
     }
@@ -62,6 +67,38 @@ export async function uploadToMinio(
   contentType: string
 ): Promise<string> {
   try {
+    // Verificar que el bucket existe
+    const bucketExists = await minioClient.bucketExists(bucketName);
+    if (!bucketExists) {
+      console.log(`📦 Creando bucket '${bucketName}'...`);
+      await minioClient.makeBucket(bucketName, 'us-east-1');
+      
+      // Configurar política pública para recursos
+      if (bucketName === 'resources') {
+        const policy = {
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: { AWS: ['*'] },
+              Action: ['s3:GetObject'],
+              Resource: [`arn:aws:s3:::${bucketName}/*`]
+            }
+          ]
+        };
+        
+        await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
+        console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
+      }
+    }
+    
+    // Verificar que el buffer es válido
+    if (!fileBuffer || fileBuffer.length === 0) {
+      throw new Error('Buffer de archivo vacío o inválido');
+    }
+    
+    console.log(`📤 Subiendo archivo: ${objectName} (${fileBuffer.length} bytes) a bucket: ${bucketName}`);
+    
     const stream = Readable.from(fileBuffer);
     
     await minioClient.putObject(bucketName, objectName, stream, fileBuffer.length, {
@@ -76,6 +113,12 @@ export async function uploadToMinio(
     return publicUrl;
   } catch (error) {
     console.error('❌ Error subiendo archivo a MinIO:', error);
+    console.error('📋 Detalles del error:', {
+      bucketName,
+      objectName,
+      bufferLength: fileBuffer?.length,
+      contentType
+    });
     throw error;
   }
 }

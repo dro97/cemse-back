@@ -131,14 +131,76 @@ export async function getQuiz(req: Request, res: Response) {
  *         description: Invalid input data
  */
 export async function createQuiz(req: Request, res: Response) {
-  const newItem = await prisma.quiz.create({
-    data: req.body
-  });
-  
-  // Emit real-time update
-  io.emit("quiz:created", newItem);
-  
-  res.status(201).json(newItem);
+  try {
+    // Debug logs
+    console.log('🔍 DEBUG - createQuiz llamado');
+    console.log('🔍 DEBUG - req.body:', JSON.stringify(req.body, null, 2));
+    console.log('🔍 DEBUG - req.headers:', JSON.stringify(req.headers, null, 2));
+    console.log('🔍 DEBUG - req.method:', req.method);
+    console.log('🔍 DEBUG - req.url:', req.url);
+    
+    // Validar que req.body existe y tiene los campos requeridos
+    if (!req.body || !req.body.title) {
+      console.log('❌ DEBUG - req.body es undefined o no tiene title');
+      console.log('❌ DEBUG - req.body type:', typeof req.body);
+      console.log('❌ DEBUG - req.body keys:', req.body ? Object.keys(req.body) : 'undefined');
+      
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        message: 'El título del quiz es requerido',
+        debug: {
+          bodyExists: !!req.body,
+          bodyType: typeof req.body,
+          bodyKeys: req.body ? Object.keys(req.body) : 'undefined',
+          hasTitle: req.body ? !!req.body.title : false
+        }
+      });
+    }
+
+    // Extraer y validar los datos
+    const {
+      courseId,
+      lessonId,
+      title,
+      description,
+      timeLimit,
+      passingScore = 70,
+      showCorrectAnswers = false,
+      isActive = true
+    } = req.body;
+
+    // Validar que al menos uno de courseId o lessonId esté presente
+    if (!courseId && !lessonId) {
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        message: 'Debe especificar courseId o lessonId'
+      });
+    }
+
+    const newItem = await prisma.quiz.create({
+      data: {
+        courseId: courseId || null,
+        lessonId: lessonId || null,
+        title,
+        description: description || null,
+        timeLimit: timeLimit ? parseInt(timeLimit as string) : null,
+        passingScore: parseInt(passingScore as string),
+        showCorrectAnswers: showCorrectAnswers === "true" || showCorrectAnswers === true,
+        isActive: isActive === "true" || isActive === true
+      }
+    });
+    
+    // Emit real-time update
+    io.emit("quiz:created", newItem);
+    
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error('Error creando quiz:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
 }
 
 /**
@@ -171,15 +233,63 @@ export async function createQuiz(req: Request, res: Response) {
  *         description: Quiz not found
  */
 export async function updateQuiz(req: Request, res: Response) {
-  const updated = await prisma.quiz.update({
-    where: { id: req.params["id"] || "" },
-    data: req.body
-  });
-  
-  // Emit real-time update
-  io.emit("quiz:updated", updated);
-  
-  res.json(updated);
+  try {
+    const quizId = req.params["id"];
+    if (!quizId) {
+      return res.status(400).json({
+        error: 'ID requerido',
+        message: 'El ID del quiz es requerido'
+      });
+    }
+
+    // Validar que req.body existe
+    if (!req.body) {
+      return res.status(400).json({
+        error: 'Datos inválidos',
+        message: 'No se proporcionaron datos para actualizar'
+      });
+    }
+
+    // Extraer y validar los datos
+    const {
+      courseId,
+      lessonId,
+      title,
+      description,
+      timeLimit,
+      passingScore,
+      showCorrectAnswers,
+      isActive
+    } = req.body;
+
+    // Construir objeto de datos para actualizar
+    const updateData: any = {};
+    
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (courseId !== undefined) updateData.courseId = courseId || null;
+    if (lessonId !== undefined) updateData.lessonId = lessonId || null;
+    if (timeLimit !== undefined) updateData.timeLimit = timeLimit ? parseInt(timeLimit as string) : null;
+    if (passingScore !== undefined) updateData.passingScore = parseInt(passingScore as string);
+    if (showCorrectAnswers !== undefined) updateData.showCorrectAnswers = showCorrectAnswers === "true" || showCorrectAnswers === true;
+    if (isActive !== undefined) updateData.isActive = isActive === "true" || isActive === true;
+
+    const updated = await prisma.quiz.update({
+      where: { id: quizId },
+      data: updateData
+    });
+    
+    // Emit real-time update
+    io.emit("quiz:updated", updated);
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Error actualizando quiz:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    });
+  }
 }
 
 /**

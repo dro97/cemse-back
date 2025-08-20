@@ -93,6 +93,11 @@ app.use('/api/profile', json({ limit: '10mb' }));
 app.use('/api/analytics', json({ limit: '10mb' }));
 app.use('/api/course', json({ limit: '10mb' }));
 app.use('/api/coursemodule', json({ limit: '10mb' }));
+app.use('/api/quiz', json({ limit: '10mb' }));
+app.use('/api/quizquestion', json({ limit: '10mb' }));
+app.use('/api/quizattempt', json({ limit: '10mb' }));
+app.use('/api/quizanswer', json({ limit: '10mb' }));
+app.use('/api/course-enrollments', json({ limit: '10mb' }));
 app.use('/api/newsarticle/json', json({ limit: '10mb' })); // JSON endpoint for news articles without file upload
 
 // Note: /api/newsarticle routes will use multer for multipart/form-data requests (with image uploads)

@@ -27,6 +27,13 @@ export async function listCourseEnrollments(req: Request, res: Response) {
               },
               orderBy: { orderIndex: 'asc' }
             },
+            quizzes: {
+              include: {
+                questions: {
+                  orderBy: { orderIndex: 'asc' }
+                }
+              }
+            },
             instructor: true
           }
         },
@@ -36,8 +43,95 @@ export async function listCourseEnrollments(req: Request, res: Response) {
         enrolledAt: 'desc'
       }
     });
+
+    // Enriquecer los datos con recursos y quizzes de lecciones
+    console.log('🔍 Iniciando enriquecimiento de datos...');
+    const enrichedItems = await Promise.all(
+      items.map(async (enrollment) => {
+        console.log(`📚 Procesando curso: ${enrollment.course.title}`);
+        
+        const enrichedCourse = {
+          ...enrollment.course,
+          modules: await Promise.all(
+            enrollment.course.modules.map(async (module) => {
+              console.log(`📦 Procesando módulo: ${module.title}`);
+              
+              const enrichedLessons = await Promise.all(
+                module.lessons.map(async (lesson) => {
+                  console.log(`📖 Procesando lección: ${lesson.title} (ID: ${lesson.id})`);
+                  
+                  try {
+                    // Obtener recursos de la lección usando consulta raw
+                    const resources = await prisma.$queryRaw`
+                      SELECT id, lesson_id as lessonId, title, description, type, url, file_path as filePath, 
+                             file_size as fileSize, order_index as orderIndex, is_downloadable as isDownloadable, 
+                             created_at as createdAt
+                      FROM lesson_resources 
+                      WHERE lesson_id = ${lesson.id} 
+                      ORDER BY order_index ASC
+                    ` as any[];
+                    console.log(`   📎 Recursos encontrados: ${resources.length}`);
+
+                    // Obtener quizzes de la lección
+                    const lessonQuizzes = await prisma.quiz.findMany({
+                      where: { lessonId: lesson.id },
+                      include: {
+                        questions: {
+                          orderBy: { orderIndex: 'asc' }
+                        }
+                      }
+                    });
+                    console.log(`   📝 Quizzes encontrados: ${lessonQuizzes.length}`);
+
+                                      const enrichedLesson = {
+                    ...lesson,
+                    resources,
+                    quizzes: lessonQuizzes
+                  };
+                  console.log(`   ✅ Lección enriquecida: ${enrichedLesson.title}`);
+                  console.log(`      - Recursos: ${enrichedLesson.resources.length}`);
+                  console.log(`      - Quizzes: ${enrichedLesson.quizzes.length}`);
+                  return enrichedLesson;
+                  } catch (error) {
+                    console.error(`❌ Error procesando lección ${lesson.id}:`, error);
+                    return {
+                      ...lesson,
+                      resources: [],
+                      quizzes: []
+                    };
+                  }
+                })
+              );
+
+              return {
+                ...module,
+                lessons: enrichedLessons
+              };
+            })
+          )
+        };
+
+        return {
+          ...enrollment,
+          course: enrichedCourse
+        };
+      })
+    );
     
-    return res.json(items);
+    console.log('✅ Enriquecimiento completado');
+    console.log(`📊 Total de inscripciones enriquecidas: ${enrichedItems.length}`);
+    
+    // Verificar qué estamos devolviendo
+    console.log('🔍 VERIFICACIÓN FINAL - Enriquecimiento completado');
+    
+    // Agregar headers para evitar caché
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    return res.json(enrichedItems);
   } catch (error: any) {
     console.error("Error listing course enrollments:", error);
     return res.status(500).json({
@@ -65,6 +159,13 @@ export async function getCourseEnrollment(req: Request, res: Response) {
               },
               orderBy: { orderIndex: 'asc' }
             },
+            quizzes: {
+              include: {
+                questions: {
+                  orderBy: { orderIndex: 'asc' }
+                }
+              }
+            },
             instructor: true
           }
         },
@@ -80,8 +181,86 @@ export async function getCourseEnrollment(req: Request, res: Response) {
     if (user && user.type === 'user' && item.studentId !== user.id && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied" });
     }
+
+    // Enriquecer los datos con recursos y quizzes de lecciones
+    console.log('🔍 Iniciando enriquecimiento de inscripción específica...');
     
-    return res.json(item);
+    const enrichedCourse = {
+      ...item.course,
+      modules: await Promise.all(
+        item.course.modules.map(async (module) => {
+          console.log(`📦 Procesando módulo: ${module.title}`);
+          
+          const enrichedLessons = await Promise.all(
+            module.lessons.map(async (lesson) => {
+              console.log(`📖 Procesando lección: ${lesson.title} (ID: ${lesson.id})`);
+              
+              try {
+                // Obtener recursos de la lección usando consulta raw
+                const resources = await prisma.$queryRaw`
+                  SELECT id, lesson_id as lessonId, title, description, type, url, file_path as filePath, 
+                         file_size as fileSize, order_index as orderIndex, is_downloadable as isDownloadable, 
+                         created_at as createdAt
+                  FROM lesson_resources 
+                  WHERE lesson_id = ${lesson.id} 
+                  ORDER BY order_index ASC
+                ` as any[];
+                console.log(`   📎 Recursos encontrados: ${resources.length}`);
+
+                // Obtener quizzes de la lección
+                const lessonQuizzes = await prisma.quiz.findMany({
+                  where: { lessonId: lesson.id },
+                  include: {
+                    questions: {
+                      orderBy: { orderIndex: 'asc' }
+                    }
+                  }
+                });
+                console.log(`   📝 Quizzes encontrados: ${lessonQuizzes.length}`);
+
+                const enrichedLesson = {
+                  ...lesson,
+                  resources,
+                  quizzes: lessonQuizzes
+                };
+                console.log(`   ✅ Lección enriquecida: ${enrichedLesson.title}`);
+                console.log(`      - Recursos: ${enrichedLesson.resources.length}`);
+                console.log(`      - Quizzes: ${enrichedLesson.quizzes.length}`);
+                return enrichedLesson;
+              } catch (error) {
+                console.error(`❌ Error procesando lección ${lesson.id}:`, error);
+                return {
+                  ...lesson,
+                  resources: [],
+                  quizzes: []
+                };
+              }
+            })
+          );
+
+          return {
+            ...module,
+            lessons: enrichedLessons
+          };
+        })
+      )
+    };
+
+    const enrichedItem = {
+      ...item,
+      course: enrichedCourse
+    };
+
+    console.log('✅ Enriquecimiento de inscripción específica completado');
+    
+    // Agregar headers para evitar caché
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    return res.json(enrichedItem);
   } catch (error: any) {
     console.error("Error getting course enrollment:", error);
     return res.status(500).json({
@@ -93,20 +272,24 @@ export async function getCourseEnrollment(req: Request, res: Response) {
 
 export async function createCourseEnrollment(req: Request, res: Response) {
   try {
-    const { studentId, courseId, ...otherData } = req.body;
+    const { courseId } = req.body;
+    
+    // Obtener el studentId del usuario autenticado
+    const studentId = req.user?.id;
     
     // Validar que se proporcionen los campos requeridos
     if (!studentId || !courseId) {
       return res.status(400).json({ 
-        message: "studentId and courseId are required" 
+        message: "courseId is required and user must be authenticated" 
       });
     }
 
     const newItem = await prisma.courseEnrollment.create({
       data: {
         studentId,
-        courseId,
-        ...otherData
+        courseId
+        // enrolledAt se establece automáticamente con la fecha actual
+        // No incluir otherData para evitar campos no válidos
       },
       include: {
         course: {

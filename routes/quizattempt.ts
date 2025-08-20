@@ -22,4 +22,7 @@ router.put("/:id", QuizAttemptController.updateQuizAttempt);
 // DELETE /quiz-attempts/:id - Delete attempt (Students can delete their own, Organizations can delete any)
 router.delete("/:id", QuizAttemptController.deleteQuizAttempt);
 
+// POST /quiz-attempts/complete - Complete a quiz with answers
+router.post("/complete", requireStudent, QuizAttemptController.completeQuiz);
+
 export default router;

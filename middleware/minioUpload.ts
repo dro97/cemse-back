@@ -1,5 +1,6 @@
 import multer from 'multer';
 import { uploadToMinio, BUCKETS } from '../lib/minio';
+import path from 'path'; // Added for path.extname
 
 // Configurar multer para almacenamiento en memoria (para luego subir a MinIO)
 const storage = multer.memoryStorage();
@@ -241,4 +242,104 @@ export const processAndUploadLessonFiles = async (req: any, res: any, next: any)
       error: error.message
     });
   }
+};
+
+// Middleware for lesson resources with MinIO upload
+export const uploadLessonResourceToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB limit for resources
+      files: 1
+    },
+    fileFilter: (req, file, cb) => {
+      // Allow common document and media types
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip',
+        'application/x-zip-compressed',
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'text/plain'
+      ];
+      
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('File type not allowed'));
+      }
+    }
+  }).fields([
+    { name: 'file', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Ensure form fields are available in req.body
+    if (req.body) {
+      // Convert string values to appropriate types
+      if (req.body.orderIndex !== undefined) {
+        req.body.orderIndex = parseInt(req.body.orderIndex) || 0;
+      }
+      if (req.body.isDownloadable !== undefined) {
+        req.body.isDownloadable = req.body.isDownloadable === 'true' || req.body.isDownloadable === true;
+      }
+    }
+    
+    // Process file upload to MinIO if file exists
+    if (req.files && req.files['file'] && req.files['file'][0]) {
+      try {
+        const file = req.files['file'][0];
+        console.log('📁 [DEBUG] Archivo recibido:', {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          bufferLength: file.buffer.length
+        });
+        
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        const filename = `lesson-resource-${uniqueSuffix}${ext}`;
+        
+        console.log('📝 [DEBUG] Nombre del objeto generado:', filename);
+        
+        // Upload to MinIO
+        console.log('☁️ [DEBUG] Subiendo archivo a MinIO...');
+        const url = await uploadToMinio('resources', filename, file.buffer, file.mimetype);
+        console.log('✅ Archivo subido exitosamente:', url);
+        
+        // Store file info in request for controller to use
+        req.uploadedResource = {
+          url: url,
+          filename: filename,
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype,
+          bucket: 'resources'
+        };
+        
+        console.log('✅ [DEBUG] Archivo subido a MinIO:', url);
+        console.log('📋 [DEBUG] req.uploadedResource configurado:', req.uploadedResource);
+        
+      } catch (error) {
+        console.error('❌ [ERROR] Error uploading to MinIO:', error);
+        return next(error);
+      }
+    }
+    
+    next();
+  });
 };

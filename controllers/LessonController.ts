@@ -307,10 +307,10 @@ export async function createLesson(req: RequestWithUploadedFiles, res: Response)
       moduleId,
       contentType,
       videoUrl: finalVideoUrl || null,
-      duration: duration || null,
-      orderIndex,
-      isRequired: isRequired !== undefined ? isRequired : true,
-      isPreview: isPreview !== undefined ? isPreview : false,
+      duration: duration ? parseInt(duration as string) : null,
+      orderIndex: parseInt(orderIndex as string),
+      isRequired: isRequired !== undefined ? (isRequired === "true" || isRequired === true) : true,
+      isPreview: isPreview !== undefined ? (isPreview === "true" || isPreview === true) : false,
       attachments: finalAttachments || null
     }
   });
@@ -377,20 +377,28 @@ export async function updateLesson(req: Request, res: Response) {
     });
   }
 
+  const updateData: any = {
+    title,
+    description,
+    content,
+    contentType,
+    videoUrl,
+    isRequired: isRequired !== undefined ? (isRequired === "true" || isRequired === true) : isRequired,
+    isPreview: isPreview !== undefined ? (isPreview === "true" || isPreview === true) : isPreview,
+    attachments
+  };
+
+  if (duration !== undefined) {
+    updateData.duration = duration ? parseInt(duration as string) : null;
+  }
+
+  if (orderIndex !== undefined) {
+    updateData.orderIndex = parseInt(orderIndex as string);
+  }
+
   const updated = await prisma.lesson.update({
     where: { id: req.params["id"] || "" },
-    data: {
-      title,
-      description,
-      content,
-      contentType,
-      videoUrl,
-      duration,
-      orderIndex,
-      isRequired,
-      isPreview,
-      attachments
-    }
+    data: updateData
   });
   
   // Emit real-time update

@@ -234,6 +234,77 @@ export const uploadSingleFile = multer({
   { name: 'file', maxCount: 1 }
 ]);
 
+// Enhanced middleware for lesson resources that ensures form fields are processed
+export const uploadLessonResource = (req: any, res: any, next: any) => {
+  multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/resources');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+      }
+    }),
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB limit for resources
+      files: 1
+    },
+    fileFilter: (req, file, cb) => {
+      // Allow common document and media types
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip',
+        'application/x-zip-compressed',
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'text/plain'
+      ];
+      
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('File type not allowed'));
+      }
+    }
+  }).fields([
+    { name: 'file', maxCount: 1 }
+  ])(req, res, (err) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Ensure form fields are available in req.body
+    if (req.body) {
+      // Convert string values to appropriate types
+      if (req.body.orderIndex !== undefined) {
+        req.body.orderIndex = parseInt(req.body.orderIndex) || 0;
+      }
+      if (req.body.isDownloadable !== undefined) {
+        req.body.isDownloadable = req.body.isDownloadable === 'true' || req.body.isDownloadable === true;
+      }
+    }
+    
+    next();
+  });
+};
+
 // Legacy export for backward compatibility
 export const uploadImage = uploadSingleImage;
 

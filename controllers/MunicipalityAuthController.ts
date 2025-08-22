@@ -158,22 +158,22 @@ export async function getMunicipalityProfile(req: Request, res: Response): Promi
     let municipalityId = user.id;
     let municipality = null;
 
-    // If user is municipality type, use the ID directly
-    if (user.type === 'municipality') {
-      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is municipality type, using ID directly");
-      municipality = await prisma.municipality.findUnique({
-        where: { id: municipalityId }
-      });
-    }
-    // If user is user type with MUNICIPAL_GOVERNMENTS role, find municipality by username
-    else if (user.type === 'user' && user.role === 'MUNICIPAL_GOVERNMENTS') {
-      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is user type with MUNICIPAL_GOVERNMENTS role, finding municipality by username");
+    // If user has MUNICIPAL_GOVERNMENTS role, find municipality by username
+    if (user.role === 'MUNICIPAL_GOVERNMENTS') {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User has MUNICIPAL_GOVERNMENTS role, finding municipality by username");
       municipality = await prisma.municipality.findUnique({
         where: { username: user.username }
       });
       if (municipality) {
         municipalityId = municipality.id;
       }
+    }
+    // If user is municipality type (and not MUNICIPAL_GOVERNMENTS role), use the ID directly
+    else if (user.type === 'municipality') {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is municipality type, using ID directly");
+      municipality = await prisma.municipality.findUnique({
+        where: { id: municipalityId }
+      });
     }
 
     if (!municipality) {
@@ -200,6 +200,10 @@ export async function getMunicipalityProfile(req: Request, res: Response): Promi
         username: true,
         email: true,
         phone: true,
+        institutionType: true,
+        customType: true,
+        primaryColor: true,
+        secondaryColor: true,
         createdAt: true,
         updatedAt: true,
         companies: {

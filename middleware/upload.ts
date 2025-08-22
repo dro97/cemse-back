@@ -49,6 +49,96 @@ export const uploadSingleImage = upload.fields([
   { name: 'image', maxCount: 1 }
 ]);
 
+// Enhanced middleware for events that ensures form fields are processed
+export const uploadEventImage = (req: any, res: any, next: any) => {
+  upload.fields([
+    { name: 'image', maxCount: 1 }
+  ])(req, res, (err) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Ensure form fields are available in req.body
+    if (req.body) {
+      // Convert string values to appropriate types for events
+      if (req.body.featured !== undefined) {
+        req.body.featured = req.body.featured === 'true';
+      }
+      if (req.body.maxCapacity && typeof req.body.maxCapacity === 'string') {
+        req.body.maxCapacity = parseInt(req.body.maxCapacity);
+      }
+      if (req.body.price && typeof req.body.price === 'string') {
+        req.body.price = parseFloat(req.body.price);
+      }
+      
+      // Handle arrays that come as JSON strings
+      if (req.body.tags && typeof req.body.tags === 'string') {
+        try {
+          req.body.tags = JSON.parse(req.body.tags);
+        } catch (e) {
+          // If JSON parsing fails, try comma-separated values
+          req.body.tags = req.body.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+        }
+      }
+      
+      if (req.body.requirements && typeof req.body.requirements === 'string') {
+        try {
+          req.body.requirements = JSON.parse(req.body.requirements);
+        } catch (e) {
+          req.body.requirements = req.body.requirements.split(',').map((req: string) => req.trim()).filter((req: string) => req);
+        }
+      }
+      
+      if (req.body.agenda && typeof req.body.agenda === 'string') {
+        try {
+          req.body.agenda = JSON.parse(req.body.agenda);
+        } catch (e) {
+          req.body.agenda = req.body.agenda.split(',').map((item: string) => item.trim()).filter((item: string) => item);
+        }
+      }
+      
+      if (req.body.speakers && typeof req.body.speakers === 'string') {
+        try {
+          req.body.speakers = JSON.parse(req.body.speakers);
+        } catch (e) {
+          req.body.speakers = req.body.speakers.split(',').map((speaker: string) => speaker.trim()).filter((speaker: string) => speaker);
+        }
+      }
+      
+      // Ensure arrays are always arrays
+      if (!Array.isArray(req.body.tags)) req.body.tags = [];
+      if (!Array.isArray(req.body.requirements)) req.body.requirements = [];
+      if (!Array.isArray(req.body.agenda)) req.body.agenda = [];
+      if (!Array.isArray(req.body.speakers)) req.body.speakers = [];
+    }
+    
+    next();
+  });
+};
+
+// Middleware for youth profile list with form data support
+export const uploadYouthProfileList = (req: any, res: any, next: any) => {
+  // Use multer without file upload, just for form data processing
+  multer().none()(req, res, (err) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Ensure form fields are available in req.body
+    if (req.body) {
+      // Convert numeric fields
+      if (req.body.page && typeof req.body.page === 'string') {
+        req.body.page = parseInt(req.body.page) || 1;
+      }
+      if (req.body.limit && typeof req.body.limit === 'string') {
+        req.body.limit = parseInt(req.body.limit) || 10;
+      }
+    }
+    
+    next();
+  });
+};
+
 // Debug middleware to log what's being processed
 export const uploadSingleImageWithDebug = (req: any, res: any, next: any) => {
   console.log('=== UPLOAD MIDDLEWARE DEBUG ===');

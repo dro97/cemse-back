@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteFile = exports.getFileUrl = exports.uploadImage = exports.uploadLessonResource = exports.uploadSingleFile = exports.uploadProfileAvatar = exports.uploadCourseFiles = exports.uploadMultipleImages = exports.uploadNewsArticle = exports.uploadSingleImageWithDebug = exports.uploadSingleImage = void 0;
+exports.deleteFile = exports.getFileUrl = exports.uploadImage = exports.uploadLessonResource = exports.uploadSingleFile = exports.uploadProfileAvatar = exports.uploadCourseFiles = exports.uploadMultipleImages = exports.uploadNewsArticle = exports.uploadSingleImageWithDebug = exports.uploadYouthProfileList = exports.uploadEventImage = exports.uploadSingleImage = void 0;
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -41,6 +41,85 @@ const upload = (0, multer_1.default)(multerConfig);
 exports.uploadSingleImage = upload.fields([
     { name: 'image', maxCount: 1 }
 ]);
+const uploadEventImage = (req, res, next) => {
+    upload.fields([
+        { name: 'image', maxCount: 1 }
+    ])(req, res, (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.body) {
+            if (req.body.featured !== undefined) {
+                req.body.featured = req.body.featured === 'true';
+            }
+            if (req.body.maxCapacity && typeof req.body.maxCapacity === 'string') {
+                req.body.maxCapacity = parseInt(req.body.maxCapacity);
+            }
+            if (req.body.price && typeof req.body.price === 'string') {
+                req.body.price = parseFloat(req.body.price);
+            }
+            if (req.body.tags && typeof req.body.tags === 'string') {
+                try {
+                    req.body.tags = JSON.parse(req.body.tags);
+                }
+                catch (e) {
+                    req.body.tags = req.body.tags.split(',').map((tag) => tag.trim()).filter((tag) => tag);
+                }
+            }
+            if (req.body.requirements && typeof req.body.requirements === 'string') {
+                try {
+                    req.body.requirements = JSON.parse(req.body.requirements);
+                }
+                catch (e) {
+                    req.body.requirements = req.body.requirements.split(',').map((req) => req.trim()).filter((req) => req);
+                }
+            }
+            if (req.body.agenda && typeof req.body.agenda === 'string') {
+                try {
+                    req.body.agenda = JSON.parse(req.body.agenda);
+                }
+                catch (e) {
+                    req.body.agenda = req.body.agenda.split(',').map((item) => item.trim()).filter((item) => item);
+                }
+            }
+            if (req.body.speakers && typeof req.body.speakers === 'string') {
+                try {
+                    req.body.speakers = JSON.parse(req.body.speakers);
+                }
+                catch (e) {
+                    req.body.speakers = req.body.speakers.split(',').map((speaker) => speaker.trim()).filter((speaker) => speaker);
+                }
+            }
+            if (!Array.isArray(req.body.tags))
+                req.body.tags = [];
+            if (!Array.isArray(req.body.requirements))
+                req.body.requirements = [];
+            if (!Array.isArray(req.body.agenda))
+                req.body.agenda = [];
+            if (!Array.isArray(req.body.speakers))
+                req.body.speakers = [];
+        }
+        next();
+    });
+};
+exports.uploadEventImage = uploadEventImage;
+const uploadYouthProfileList = (req, res, next) => {
+    (0, multer_1.default)().none()(req, res, (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.body) {
+            if (req.body.page && typeof req.body.page === 'string') {
+                req.body.page = parseInt(req.body.page) || 1;
+            }
+            if (req.body.limit && typeof req.body.limit === 'string') {
+                req.body.limit = parseInt(req.body.limit) || 10;
+            }
+        }
+        next();
+    });
+};
+exports.uploadYouthProfileList = uploadYouthProfileList;
 const uploadSingleImageWithDebug = (req, res, next) => {
     console.log('=== UPLOAD MIDDLEWARE DEBUG ===');
     console.log('Before multer processing:');
@@ -62,12 +141,29 @@ const uploadSingleImageWithDebug = (req, res, next) => {
 };
 exports.uploadSingleImageWithDebug = uploadSingleImageWithDebug;
 const uploadNewsArticle = (req, res, next) => {
-    upload.fields([
+    const contentType = req.get('Content-Type');
+    console.log('=== UPLOAD NEWS ARTICLE MIDDLEWARE ===');
+    console.log('Content-Type:', contentType);
+    console.log('Headers:', req.headers);
+    console.log('Using permissive multer configuration');
+    const permissiveUpload = (0, multer_1.default)({
+        storage: storage,
+        fileFilter: fileFilter,
+        limits: {
+            fileSize: 5 * 1024 * 1024,
+            files: 1
+        }
+    }).fields([
         { name: 'image', maxCount: 1 }
-    ])(req, res, (err) => {
+    ]);
+    permissiveUpload(req, res, (err) => {
         if (err) {
+            console.log('Multer error:', err);
             return next(err);
         }
+        console.log('Multer processing completed');
+        console.log('req.body after multer:', req.body);
+        console.log('req.files after multer:', req.files);
         if (req.body) {
             if (req.body.featured !== undefined) {
                 req.body.featured = req.body.featured === 'true';

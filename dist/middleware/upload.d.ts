@@ -1,4 +1,6 @@
 export declare const uploadSingleImage: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+export declare const uploadEventImage: (req: any, res: any, next: any) => void;
+export declare const uploadYouthProfileList: (req: any, res: any, next: any) => void;
 export declare const uploadSingleImageWithDebug: (req: any, res: any, next: any) => void;
 export declare const uploadNewsArticle: (req: any, res: any, next: any) => void;
 export declare const uploadMultipleImages: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;

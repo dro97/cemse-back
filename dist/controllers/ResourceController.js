@@ -5,10 +5,44 @@ exports.getResource = getResource;
 exports.createResource = createResource;
 exports.updateResource = updateResource;
 exports.deleteResource = deleteResource;
+exports.getMunicipalityResources = getMunicipalityResources;
+exports.searchMunicipalityResources = searchMunicipalityResources;
 const prisma_1 = require("../lib/prisma");
-async function listResources(_req, res) {
-    const items = await prisma_1.prisma.resource.findMany();
-    return res.json(items);
+async function listResources(req, res) {
+    try {
+        const { municipality, author, category, type, tags } = req.query;
+        const where = {};
+        if (municipality) {
+            where.OR = [
+                { author: { contains: municipality, mode: 'insensitive' } },
+                { title: { contains: municipality, mode: 'insensitive' } },
+                { description: { contains: municipality, mode: 'insensitive' } },
+                { tags: { hasSome: [municipality] } }
+            ];
+        }
+        if (author) {
+            where.author = { contains: author, mode: 'insensitive' };
+        }
+        if (category) {
+            where.category = { contains: category, mode: 'insensitive' };
+        }
+        if (type) {
+            where.type = { contains: type, mode: 'insensitive' };
+        }
+        if (tags) {
+            const tagArray = tags.split(',').map(tag => tag.trim());
+            where.tags = { hasSome: tagArray };
+        }
+        const items = await prisma_1.prisma.resource.findMany({
+            where,
+            orderBy: { createdAt: 'desc' }
+        });
+        return res.json(items);
+    }
+    catch (error) {
+        console.error("Error listing resources:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
 }
 async function getResource(req, res) {
     const { id } = req.params;
@@ -243,6 +277,89 @@ async function deleteResource(req, res) {
             message: "Internal server error",
             error: error.message
         });
+    }
+}
+async function getMunicipalityResources(req, res) {
+    try {
+        const { municipalityId } = req.params;
+        const { category, type } = req.query;
+        if (!municipalityId) {
+            return res.status(400).json({ message: "Missing municipality ID" });
+        }
+        const municipality = await prisma_1.prisma.municipality.findUnique({
+            where: { id: municipalityId },
+            select: { id: true, name: true, department: true }
+        });
+        if (!municipality) {
+            return res.status(404).json({ message: "Municipality not found" });
+        }
+        const where = {
+            OR: [
+                { author: { contains: municipality.name, mode: 'insensitive' } },
+                { title: { contains: municipality.name, mode: 'insensitive' } },
+                { description: { contains: municipality.name, mode: 'insensitive' } },
+                { tags: { hasSome: [municipality.name, municipality.department] } }
+            ]
+        };
+        if (category) {
+            where.category = { contains: category, mode: 'insensitive' };
+        }
+        if (type) {
+            where.type = { contains: type, mode: 'insensitive' };
+        }
+        const resources = await prisma_1.prisma.resource.findMany({
+            where,
+            orderBy: { createdAt: 'desc' }
+        });
+        return res.json({
+            municipality: {
+                id: municipality.id,
+                name: municipality.name,
+                department: municipality.department
+            },
+            resources,
+            totalCount: resources.length
+        });
+    }
+    catch (error) {
+        console.error("Error getting municipality resources:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+async function searchMunicipalityResources(req, res) {
+    try {
+        const { municipalityName } = req.params;
+        const { category, type } = req.query;
+        if (!municipalityName) {
+            return res.status(400).json({ message: "Missing municipality name" });
+        }
+        const where = {
+            OR: [
+                { author: { contains: municipalityName, mode: 'insensitive' } },
+                { title: { contains: municipalityName, mode: 'insensitive' } },
+                { description: { contains: municipalityName, mode: 'insensitive' } },
+                { tags: { hasSome: [municipalityName] } }
+            ]
+        };
+        if (category) {
+            where.category = { contains: category, mode: 'insensitive' };
+        }
+        if (type) {
+            where.type = { contains: type, mode: 'insensitive' };
+        }
+        const resources = await prisma_1.prisma.resource.findMany({
+            where,
+            orderBy: { createdAt: 'desc' }
+        });
+        return res.json({
+            searchTerm: municipalityName,
+            resources,
+            totalCount: resources.length
+        });
+    }
+    catch (error) {
+        console.error("Error searching municipality resources:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 //# sourceMappingURL=ResourceController.js.map

@@ -8,10 +8,40 @@ exports.updateNewsArticle = updateNewsArticle;
 exports.deleteNewsArticle = deleteNewsArticle;
 const prisma_1 = require("../lib/prisma");
 const upload_1 = require("../middleware/upload");
+async function getUserAuthorId(user) {
+    if (user.type === 'company' || user.role === 'COMPANIES') {
+        const profile = await prisma_1.prisma.profile.findFirst({
+            where: { companyId: user.id },
+            select: { userId: true }
+        });
+        if (profile) {
+            return profile.userId;
+        }
+    }
+    else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
+        const municipality = await prisma_1.prisma.municipality.findFirst({
+            where: { createdBy: user.id },
+            select: { id: true }
+        });
+        if (municipality) {
+            const profile = await prisma_1.prisma.profile.findFirst({
+                where: { userId: municipality.id },
+                select: { userId: true }
+            });
+            if (profile) {
+                return profile.userId;
+            }
+            else {
+                return municipality.id;
+            }
+        }
+    }
+    return user.id;
+}
 async function listNewsArticles(req, res) {
     try {
         const user = req.user;
-        const { status, category, authorType, authorId } = req.query;
+        const { status, category, authorType, authorId, municipalityId } = req.query;
         let whereClause = {};
         if (user) {
             if (user.type === 'company') {
@@ -44,9 +74,37 @@ async function listNewsArticles(req, res) {
         if (authorType) {
             whereClause.authorType = authorType;
         }
-        if (authorId) {
+        if (municipalityId) {
+            console.log('Filtering by municipalityId:', municipalityId);
+            const municipalityCompanies = await prisma_1.prisma.company.findMany({
+                where: { municipalityId: municipalityId },
+                select: { id: true }
+            });
+            const companyIds = municipalityCompanies.map(company => company.id);
+            console.log('Found companies in municipality:', companyIds);
+            const municipalityProfiles = await prisma_1.prisma.profile.findMany({
+                where: {
+                    OR: [
+                        { companyId: { in: companyIds } },
+                        { userId: municipalityId }
+                    ]
+                },
+                select: { userId: true }
+            });
+            const profileUserIds = municipalityProfiles.map(profile => profile.userId);
+            console.log('Found profile user IDs:', profileUserIds);
+            if (profileUserIds.length > 0) {
+                whereClause.authorId = { in: profileUserIds };
+            }
+            else {
+                console.log('No profiles found for municipality, returning empty result');
+                return res.json([]);
+            }
+        }
+        else if (authorId) {
             whereClause.authorId = authorId;
         }
+        console.log('Final whereClause:', JSON.stringify(whereClause, null, 2));
         const articles = await prisma_1.prisma.newsArticle.findMany({
             where: whereClause,
             orderBy: [
@@ -55,6 +113,7 @@ async function listNewsArticles(req, res) {
                 { createdAt: 'desc' }
             ]
         });
+        console.log('Found articles:', articles.length);
         return res.json(articles);
     }
     catch (error) {
@@ -201,8 +260,14 @@ async function getNewsArticle(req, res) {
         if (!article) {
             return res.status(404).json({ message: "News article not found" });
         }
-        if (article.status !== 'PUBLISHED' && (!user || user.id !== article.authorId)) {
-            return res.status(403).json({ message: "Access denied" });
+        if (article.status !== 'PUBLISHED') {
+            if (!user) {
+                return res.status(403).json({ message: "Access denied" });
+            }
+            const userAuthorId = await getUserAuthorId(user);
+            if (userAuthorId !== article.authorId && user.role !== 'SUPERADMIN') {
+                return res.status(403).json({ message: "Access denied" });
+            }
         }
         await prisma_1.prisma.newsArticle.update({
             where: { id: id },
@@ -231,49 +296,92 @@ async function createNewsArticle(req, res) {
         if (!user) {
             return res.status(401).json({ message: "Authentication required" });
         }
-        if (!['company', 'municipality'].includes(user.type) && user.role !== 'SUPERADMIN') {
+        const allowedTypes = ['company', 'municipality'];
+        const allowedRoles = ['SUPERADMIN', 'MUNICIPAL_GOVERNMENTS'];
+        const hasValidType = user.type && allowedTypes.includes(user.type);
+        const hasValidRole = user.role && allowedRoles.includes(user.role);
+        if (!hasValidType && !hasValidRole) {
             return res.status(403).json({ message: "Only companies, municipalities, and admins can create news articles" });
         }
-        const formData = req.body || {};
         const files = req.files || {};
+        const contentType = req.get('Content-Type');
+        const isJsonRequest = contentType && contentType.includes('application/json');
+        console.log('=== FORM DATA DEBUG ===');
+        console.log('Content-Type:', contentType);
+        console.log('Is JSON request:', isJsonRequest);
+        console.log('req.body keys:', Object.keys(req.body || {}));
+        console.log('req.body.title:', req.body.title);
+        console.log('req.body.content:', req.body.content);
+        console.log('req.body.summary:', req.body.summary);
+        console.log('req.body.category:', req.body.category);
+        console.log('req.files:', req.files);
+        console.log('========================');
+        if (isJsonRequest && (!req.body || !req.body.title)) {
+            return res.status(400).json({
+                message: "Invalid JSON data. Required fields: title, content, summary, category",
+                debug: {
+                    contentType: contentType,
+                    isJsonRequest: isJsonRequest,
+                    bodyExists: !!req.body,
+                    bodyKeys: req.body ? Object.keys(req.body) : []
+                }
+            });
+        }
         console.log('=== DEBUG: News Article Creation ===');
         console.log('req.body:', JSON.stringify(req.body, null, 2));
         console.log('req.files:', JSON.stringify(req.files, null, 2));
-        console.log('formData:', JSON.stringify(formData, null, 2));
+        console.log('req.body:', JSON.stringify(req.body, null, 2));
         console.log('Content-Type:', req.get('Content-Type'));
         console.log('Headers:', JSON.stringify(req.headers, null, 2));
         console.log('Method:', req.method);
         console.log('URL:', req.url);
         console.log('=====================================');
-        const title = formData.title;
-        const content = formData.content;
-        const summary = formData.summary;
-        const category = formData.category;
-        const priority = formData.priority || 'MEDIUM';
-        const status = formData.status || 'DRAFT';
-        let tags = formData.tags || [];
+        const title = req.body.title;
+        const content = req.body.content;
+        const summary = req.body.summary;
+        const category = req.body.category;
+        const priority = req.body.priority || 'MEDIUM';
+        const status = req.body.status || 'DRAFT';
+        let tags = req.body.tags || [];
         if (typeof tags === 'string') {
             tags = tags.split(',').map((tag) => tag.trim()).filter((tag) => tag.length > 0);
         }
-        let featured = formData.featured || false;
+        let featured = req.body.featured || false;
         if (typeof featured === 'string') {
             featured = featured === 'true';
         }
-        let targetAudience = formData.targetAudience || [];
+        let targetAudience = req.body.targetAudience || [];
         if (typeof targetAudience === 'string') {
             targetAudience = [targetAudience];
         }
-        const region = formData.region;
-        const imageUrl = formData.imageUrl;
-        const videoUrl = formData.videoUrl;
-        const relatedLinks = formData.relatedLinks;
+        const region = req.body.region;
+        const imageUrl = req.body.imageUrl;
+        const videoUrl = req.body.videoUrl;
+        const relatedLinks = req.body.relatedLinks;
         let finalImageUrl = imageUrl;
         if (files['image'] && files['image'][0]) {
             finalImageUrl = (0, upload_1.getFileUrl)(files['image'][0].filename);
         }
         if (!title?.trim() || !content?.trim() || !summary?.trim() || !category?.trim()) {
             return res.status(400).json({
-                message: "Title, content, summary, and category are required"
+                message: "Title, content, summary, and category are required",
+                received: {
+                    title: title?.trim(),
+                    content: content?.trim(),
+                    summary: summary?.trim(),
+                    category: category?.trim()
+                },
+                debug: {
+                    contentType: contentType,
+                    isJsonRequest: isJsonRequest,
+                    bodyKeys: Object.keys(req.body || {}),
+                    bodyValues: {
+                        title: req.body.title,
+                        content: req.body.content,
+                        summary: req.body.summary,
+                        category: req.body.category
+                    }
+                }
             });
         }
         const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
@@ -289,10 +397,10 @@ async function createNewsArticle(req, res) {
             });
         }
         let authorType;
-        if (user.type === 'company') {
+        if (user.type === 'company' || user.role === 'COMPANIES') {
             authorType = 'COMPANY';
         }
-        else if (user.type === 'municipality') {
+        else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
             authorType = 'GOVERNMENT';
         }
         else {
@@ -301,27 +409,93 @@ async function createNewsArticle(req, res) {
         console.log('=== AUTHOR DEBUG ===');
         console.log('User ID:', user.id);
         console.log('User type:', user.type);
-        let authorId = user.id;
-        let authorName = '';
-        if (user.type === 'company') {
+        console.log('User role:', user.role);
+        console.log('Request authorId:', req.body.authorId);
+        console.log('Request authorName:', req.body.authorName);
+        let authorId;
+        let authorName;
+        if (user.type === 'company' || user.role === 'COMPANIES') {
             const company = await prisma_1.prisma.company.findUnique({
                 where: { id: user.id },
-                select: { name: true }
+                select: { id: true, name: true }
             });
-            authorName = company?.name || 'Company';
+            if (!company) {
+                return res.status(404).json({ message: "Company not found" });
+            }
+            const profile = await prisma_1.prisma.profile.findFirst({
+                where: { companyId: user.id },
+                select: { userId: true, firstName: true, lastName: true }
+            });
+            if (!profile) {
+                const newProfile = await prisma_1.prisma.profile.create({
+                    data: {
+                        userId: user.id,
+                        firstName: company.name,
+                        lastName: '',
+                        email: user.email || '',
+                        role: 'COMPANIES',
+                        companyId: user.id
+                    }
+                });
+                authorId = newProfile.userId;
+                authorName = company.name;
+            }
+            else {
+                authorId = profile.userId;
+                authorName = company.name;
+            }
             console.log('Company found:', company);
+            console.log('Profile for company:', profile);
         }
-        else if (user.type === 'municipality') {
-            const municipality = await prisma_1.prisma.municipality.findUnique({
-                where: { id: user.id },
-                select: { name: true }
+        else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
+            console.log('Processing municipality user');
+            const profile = await prisma_1.prisma.profile.findUnique({
+                where: { userId: user.id },
+                select: { userId: true, firstName: true, lastName: true }
             });
-            authorName = municipality?.name || 'Municipality';
-            console.log('Municipality found:', municipality);
+            if (!profile) {
+                const newProfile = await prisma_1.prisma.profile.create({
+                    data: {
+                        userId: user.id,
+                        firstName: req.body.authorName || user.username,
+                        lastName: '',
+                        email: user.email || '',
+                        role: 'MUNICIPAL_GOVERNMENTS'
+                    }
+                });
+                authorId = newProfile.userId;
+                authorName = req.body.authorName || user.username;
+            }
+            else {
+                authorId = profile.userId;
+                authorName = req.body.authorName || profile.firstName || user.username;
+            }
+            console.log('Municipality user profile found/created:', profile);
         }
         else {
-            authorName = 'Admin';
+            const profile = await prisma_1.prisma.profile.findUnique({
+                where: { userId: user.id },
+                select: { userId: true, firstName: true, lastName: true }
+            });
+            if (!profile) {
+                const newProfile = await prisma_1.prisma.profile.create({
+                    data: {
+                        userId: user.id,
+                        firstName: 'Admin',
+                        lastName: '',
+                        email: user.email || '',
+                        role: 'SUPERADMIN'
+                    }
+                });
+                authorId = newProfile.userId;
+                authorName = 'Admin';
+            }
+            else {
+                authorId = profile.userId;
+                authorName = profile.firstName || 'Admin';
+            }
             console.log('Admin user');
+            console.log('Profile for admin:', profile);
         }
         console.log('Final authorId:', authorId);
         console.log('Final authorName:', authorName);
@@ -375,33 +549,33 @@ async function updateNewsArticle(req, res) {
         if (!article) {
             return res.status(404).json({ message: "News article not found" });
         }
-        if (article.authorId !== user.id && user.role !== 'SUPERADMIN') {
+        const userAuthorId = await getUserAuthorId(user);
+        if (article.authorId !== userAuthorId && user.role !== 'SUPERADMIN') {
             return res.status(403).json({ message: "Access denied. Only the author or admin can update this article" });
         }
-        const formData = req.body || {};
         const files = req.files || {};
-        const title = formData.title;
-        const content = formData.content;
-        const summary = formData.summary;
-        const category = formData.category;
-        const priority = formData.priority;
-        const status = formData.status;
-        let tags = formData.tags;
+        const title = req.body.title;
+        const content = req.body.content;
+        const summary = req.body.summary;
+        const category = req.body.category;
+        const priority = req.body.priority;
+        const status = req.body.status;
+        let tags = req.body.tags;
         if (tags !== undefined && typeof tags === 'string') {
             tags = tags.split(',').map((tag) => tag.trim()).filter((tag) => tag.length > 0);
         }
-        let featured = formData.featured;
+        let featured = req.body.featured;
         if (featured !== undefined && typeof featured === 'string') {
             featured = featured === 'true';
         }
-        let targetAudience = formData.targetAudience;
+        let targetAudience = req.body.targetAudience;
         if (targetAudience !== undefined && typeof targetAudience === 'string') {
             targetAudience = [targetAudience];
         }
-        const region = formData.region;
-        const imageUrl = formData.imageUrl;
-        const videoUrl = formData.videoUrl;
-        const relatedLinks = formData.relatedLinks;
+        const region = req.body.region;
+        const imageUrl = req.body.imageUrl;
+        const videoUrl = req.body.videoUrl;
+        const relatedLinks = req.body.relatedLinks;
         let finalImageUrl = imageUrl;
         if (files['image'] && files['image'][0]) {
             finalImageUrl = (0, upload_1.getFileUrl)(files['image'][0].filename);
@@ -496,21 +670,8 @@ async function deleteNewsArticle(req, res) {
         if (!article) {
             return res.status(404).json({ message: "News article not found" });
         }
-        let userProfile = await prisma_1.prisma.profile.findUnique({
-            where: { userId: user.id }
-        });
-        if (!userProfile) {
-            userProfile = await prisma_1.prisma.profile.create({
-                data: {
-                    userId: user.id,
-                    firstName: user.type === 'company' ? 'Company' : user.type === 'municipality' ? 'Municipality' : 'Admin',
-                    lastName: '',
-                    email: '',
-                    role: user.role || 'COMPANIES'
-                }
-            });
-        }
-        if (article.authorId !== userProfile.id && user.role !== 'SUPERADMIN') {
+        const userAuthorId = await getUserAuthorId(user);
+        if (article.authorId !== userAuthorId && user.role !== 'SUPERADMIN') {
             return res.status(403).json({ message: "Access denied. Only the author or admin can delete this article" });
         }
         if (article.imageUrl && article.imageUrl.startsWith('/uploads/')) {

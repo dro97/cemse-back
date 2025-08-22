@@ -58,12 +58,14 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       
       console.log("🔍 AUTH DEBUG: User token validated successfully");
       
-      // Determine user type based on role
-      let userType: 'user' | 'municipality' | 'company' = 'user';
-      if (user.role === 'MUNICIPAL_GOVERNMENTS') {
-        userType = 'municipality';
-      } else if (user.role === 'COMPANIES') {
-        userType = 'company';
+      // Preserve original type from token if it exists, otherwise determine based on role
+      let userType: 'user' | 'municipality' | 'company' = payload.type || 'user';
+      if (!payload.type) {
+        if (user.role === 'MUNICIPAL_GOVERNMENTS') {
+          userType = 'municipality';
+        } else if (user.role === 'COMPANIES') {
+          userType = 'company';
+        }
       }
       
       req.user = { id: user.id, username: user.username, role: user.role, type: userType };

@@ -54,11 +54,36 @@ async function municipalityLogin(req, res) {
 }
 async function getMunicipalityProfile(req, res) {
     try {
-        const municipalityId = req.user?.id;
-        if (!municipalityId) {
+        console.log("🔍 MUNICIPALITY PROFILE DEBUG: Function called");
+        console.log("🔍 MUNICIPALITY PROFILE DEBUG: User object:", req.user);
+        const user = req.user;
+        if (!user) {
+            console.log("🔍 MUNICIPALITY PROFILE DEBUG: No user found");
             return res.status(401).json({ message: "Authentication required" });
         }
-        const municipality = await prisma_1.prisma.municipality.findUnique({
+        let municipalityId = user.id;
+        let municipality = null;
+        if (user.role === 'MUNICIPAL_GOVERNMENTS') {
+            console.log("🔍 MUNICIPALITY PROFILE DEBUG: User has MUNICIPAL_GOVERNMENTS role, finding municipality by username");
+            municipality = await prisma_1.prisma.municipality.findUnique({
+                where: { username: user.username }
+            });
+            if (municipality) {
+                municipalityId = municipality.id;
+            }
+        }
+        else if (user.type === 'municipality') {
+            console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is municipality type, using ID directly");
+            municipality = await prisma_1.prisma.municipality.findUnique({
+                where: { id: municipalityId }
+            });
+        }
+        if (!municipality) {
+            console.log("🔍 MUNICIPALITY PROFILE DEBUG: Municipality not found");
+            return res.status(404).json({ message: "Municipality not found" });
+        }
+        console.log("🔍 MUNICIPALITY PROFILE DEBUG: Municipality found:", municipality.id);
+        const municipalityData = await prisma_1.prisma.municipality.findUnique({
             where: { id: municipalityId },
             select: {
                 id: true,
@@ -75,6 +100,10 @@ async function getMunicipalityProfile(req, res) {
                 username: true,
                 email: true,
                 phone: true,
+                institutionType: true,
+                customType: true,
+                primaryColor: true,
+                secondaryColor: true,
                 createdAt: true,
                 updatedAt: true,
                 companies: {
@@ -88,10 +117,10 @@ async function getMunicipalityProfile(req, res) {
                 }
             }
         });
-        if (!municipality) {
+        if (!municipalityData) {
             return res.status(404).json({ message: "Municipality not found" });
         }
-        return res.json({ municipality });
+        return res.json({ municipality: municipalityData });
     }
     catch (error) {
         console.error("Error getting municipality profile:", error);

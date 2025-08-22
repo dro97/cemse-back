@@ -46,6 +46,7 @@ import MessageRouter from "./messages";
 import JobApplicationMessageRouter from "./jobApplicationMessages";
 import YouthApplicationRouter from "./youthapplication";
 import YouthProfileRouter from "./youth-profile";
+import EventsRouter from "./events";
 
 // Register routes
 router.use("/profile", ProfileRouter);
@@ -93,5 +94,6 @@ router.use("/messages", MessageRouter);
 router.use("/jobapplication-messages", JobApplicationMessageRouter);
 router.use("/youthapplication", YouthApplicationRouter);
 router.use("/youth-profile", YouthProfileRouter);
+router.use("/events", EventsRouter);
 
 export default router;

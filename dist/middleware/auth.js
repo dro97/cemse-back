@@ -20,43 +20,82 @@ async function authenticateToken(req, res, next) {
     try {
         const auth = req.headers.authorization;
         if (!auth || !auth.startsWith("Bearer ")) {
+            console.log("🔍 AUTH DEBUG: No Bearer token provided");
             return res.status(401).json({ message: "No Bearer token provided." });
         }
         const token = auth.replace("Bearer ", "");
+        console.log("🔍 AUTH DEBUG: Token received:", token.substring(0, 20) + "...");
         const payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        console.log("🔍 AUTH DEBUG: Token payload:", {
+            id: payload.id,
+            username: payload.username,
+            type: payload.type,
+            role: payload.role
+        });
         if (payload.role) {
+            console.log("🔍 AUTH DEBUG: Processing as regular user token");
             const user = await prisma_1.prisma.user.findUnique({
                 where: { id: payload.id }
             });
             if (!user || !user.isActive || user.role !== payload.role) {
+                console.log("🔍 AUTH DEBUG: User validation failed:", {
+                    userExists: !!user,
+                    userActive: user?.isActive,
+                    userRole: user?.role,
+                    payloadRole: payload.role
+                });
                 return res.status(401).json({ message: "Invalid or expired token." });
             }
-            req.user = { id: user.id, username: user.username, role: user.role, type: 'user' };
+            console.log("🔍 AUTH DEBUG: User token validated successfully");
+            let userType = payload.type || 'user';
+            if (!payload.type) {
+                if (user.role === 'MUNICIPAL_GOVERNMENTS') {
+                    userType = 'municipality';
+                }
+                else if (user.role === 'COMPANIES') {
+                    userType = 'company';
+                }
+            }
+            req.user = { id: user.id, username: user.username, role: user.role, type: userType };
             return next();
         }
         if (payload.type === 'municipality') {
+            console.log("🔍 AUTH DEBUG: Processing as municipality token");
             const municipality = await prisma_1.prisma.municipality.findUnique({
                 where: { id: payload.id }
             });
             if (!municipality || !municipality.isActive) {
+                console.log("🔍 AUTH DEBUG: Municipality validation failed:", {
+                    municipalityExists: !!municipality,
+                    municipalityActive: municipality?.isActive
+                });
                 return res.status(401).json({ message: "Invalid or expired token." });
             }
+            console.log("🔍 AUTH DEBUG: Municipality token validated successfully");
             req.user = { id: municipality.id, username: municipality.username, type: 'municipality' };
             return next();
         }
         if (payload.type === 'company') {
+            console.log("🔍 AUTH DEBUG: Processing as company token");
             const company = await prisma_1.prisma.company.findUnique({
                 where: { id: payload.id }
             });
             if (!company || !company.isActive) {
+                console.log("🔍 AUTH DEBUG: Company validation failed:", {
+                    companyExists: !!company,
+                    companyActive: company?.isActive
+                });
                 return res.status(401).json({ message: "Invalid or expired token." });
             }
+            console.log("🔍 AUTH DEBUG: Company token validated successfully");
             req.user = { id: company.id, username: company.username, type: 'company' };
             return next();
         }
+        console.log("🔍 AUTH DEBUG: Token type not recognized:", payload.type);
         return res.status(401).json({ message: "Invalid or expired token." });
     }
     catch (error) {
+        console.log("🔍 AUTH DEBUG: Token verification error:", error);
         return res.status(401).json({ message: "Invalid or expired token." });
     }
 }
@@ -98,19 +137,59 @@ exports.requireOrganization = requireRole([
 ]);
 function requireEntityType(allowedTypes) {
     return (req, res, next) => {
+        console.log("🔍 ENTITY TYPE DEBUG: Checking entity type middleware");
+        console.log("🔍 ENTITY TYPE DEBUG: Allowed types:", allowedTypes);
+        console.log("🔍 ENTITY TYPE DEBUG: User object:", req.user);
         if (!req.user) {
+            console.log("🔍 ENTITY TYPE DEBUG: No user found in request");
             return res.status(401).json({ message: "Authentication required." });
         }
+        console.log("🔍 ENTITY TYPE DEBUG: User type:", req.user.type);
+        console.log("🔍 ENTITY TYPE DEBUG: Is type allowed?", req.user.type ? allowedTypes.includes(req.user.type) : false);
         if (!req.user.type || !allowedTypes.includes(req.user.type)) {
+            console.log("🔍 ENTITY TYPE DEBUG: Access denied - wrong entity type");
             return res.status(403).json({
-                message: `Access denied. Required entity types: ${allowedTypes.join(", ")}`
+                message: `Access denied. Required entity types: ${allowedTypes.join(", ")}`,
+                debug: {
+                    userType: req.user.type,
+                    allowedTypes: allowedTypes,
+                    userObject: req.user
+                }
             });
         }
+        console.log("🔍 ENTITY TYPE DEBUG: Entity type validation passed");
         return next();
     };
 }
 exports.requireUser = requireEntityType(['user']);
-exports.requireMunicipality = requireEntityType(['municipality']);
+const requireMunicipality = (req, res, next) => {
+    console.log("🔍 ENTITY TYPE DEBUG: Checking municipality middleware");
+    console.log("🔍 ENTITY TYPE DEBUG: User object:", req.user);
+    if (!req.user) {
+        console.log("🔍 ENTITY TYPE DEBUG: No user found in request");
+        return res.status(401).json({ message: "Authentication required." });
+    }
+    console.log("🔍 ENTITY TYPE DEBUG: User type:", req.user.type);
+    console.log("🔍 ENTITY TYPE DEBUG: User role:", req.user.role);
+    const isMunicipalityType = req.user.type === 'municipality';
+    const isMunicipalGovernmentRole = req.user.role === client_1.UserRole.MUNICIPAL_GOVERNMENTS;
+    console.log("🔍 ENTITY TYPE DEBUG: Is municipality type?", isMunicipalityType);
+    console.log("🔍 ENTITY TYPE DEBUG: Is municipal government role?", isMunicipalGovernmentRole);
+    if (isMunicipalityType || isMunicipalGovernmentRole) {
+        console.log("🔍 ENTITY TYPE DEBUG: Municipality access granted");
+        return next();
+    }
+    console.log("🔍 ENTITY TYPE DEBUG: Access denied - not municipality type or role");
+    return res.status(403).json({
+        message: "Access denied. Municipality access required.",
+        debug: {
+            userType: req.user.type,
+            userRole: req.user.role,
+            userObject: req.user
+        }
+    });
+};
+exports.requireMunicipality = requireMunicipality;
 exports.requireCompany = requireEntityType(['company']);
 exports.requireOrganizationEntity = requireEntityType(['municipality', 'company']);
 async function optionalAuth(req, _res, next) {

@@ -12,9 +12,9 @@ router.get("/public", NewsArticleController_1.listPublicNewsArticles);
 router.use(auth_1.authenticateToken);
 router.get("/", NewsArticleController_1.listNewsArticles);
 router.get("/:id", NewsArticleController_1.getNewsArticle);
-router.post("/", upload_1.uploadSingleImage, NewsArticleController_1.createNewsArticle);
+router.post("/", upload_1.uploadNewsArticle, NewsArticleController_1.createNewsArticle);
 router.post("/json", NewsArticleController_1.createNewsArticle);
-router.put("/:id", upload_1.uploadSingleImage, NewsArticleController_1.updateNewsArticle);
+router.put("/:id", upload_1.uploadNewsArticle, NewsArticleController_1.updateNewsArticle);
 router.delete("/:id", NewsArticleController_1.deleteNewsArticle);
 exports.default = router;
 //# sourceMappingURL=newsarticle.js.map

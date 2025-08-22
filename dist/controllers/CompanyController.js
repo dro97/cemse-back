@@ -49,7 +49,7 @@ async function listCompanies(req, res) {
 async function searchCompanies(req, res) {
     try {
         const user = req.user;
-        const { query, businessSector, companySize, institutionId, department, foundedYear, isActive, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = req.query;
+        const { query, businessSector, companySize, institutionId, municipalityId, department, foundedYear, isActive, page = 1, limit = 20, sortBy = 'name', sortOrder = 'asc' } = req.query;
         let whereClause = {};
         if (user && user.type === 'municipality') {
             whereClause.municipalityId = user.id;
@@ -58,7 +58,9 @@ async function searchCompanies(req, res) {
             whereClause.id = user.id;
         }
         else {
-            whereClause.isActive = true;
+            if (!municipalityId) {
+                whereClause.isActive = true;
+            }
         }
         if (query) {
             whereClause.OR = [
@@ -74,7 +76,10 @@ async function searchCompanies(req, res) {
         if (companySize) {
             whereClause.companySize = companySize;
         }
-        if (institutionId) {
+        if (municipalityId) {
+            whereClause.municipalityId = municipalityId;
+        }
+        else if (institutionId) {
             whereClause.municipalityId = institutionId;
         }
         if (foundedYear) {
@@ -139,6 +144,7 @@ async function searchCompanies(req, res) {
                     businessSector,
                     companySize,
                     institutionId,
+                    municipalityId,
                     department,
                     foundedYear,
                     isActive
@@ -342,6 +348,13 @@ async function createCompany(req, res) {
                 debug: { municipalityId: finalMunicipalityId, municipalityName: municipality.name }
             });
         }
+        console.log("Municipality state BEFORE company creation:", {
+            id: municipality.id,
+            username: municipality.username,
+            email: municipality.email,
+            isActive: municipality.isActive,
+            updatedAt: municipality.updatedAt
+        });
         const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
         let createdBy = user.id;
@@ -353,11 +366,22 @@ async function createCompany(req, res) {
                 institutionUser = await prisma_1.prisma.user.create({
                     data: {
                         username: user.username,
-                        password: 'institution_user',
+                        password: user.password,
                         role: client_1.UserRole.MUNICIPAL_GOVERNMENTS,
                         isActive: true
                     }
                 });
+                console.log("Created user record for municipality:", institutionUser.id);
+            }
+            else {
+                console.log("Found existing user record for municipality:", institutionUser.id);
+                if (institutionUser.password !== user.password) {
+                    await prisma_1.prisma.user.update({
+                        where: { id: institutionUser.id },
+                        data: { password: user.password }
+                    });
+                    console.log("Updated user password to match municipality");
+                }
             }
             createdBy = institutionUser.id;
         }
@@ -399,6 +423,42 @@ async function createCompany(req, res) {
             }
         });
         const { password: _, ...companyWithoutPassword } = company;
+        const municipalityAfter = await prisma_1.prisma.municipality.findUnique({
+            where: { id: finalMunicipalityId }
+        });
+        console.log("Municipality state AFTER company creation:", {
+            id: municipalityAfter?.id,
+            username: municipalityAfter?.username,
+            email: municipalityAfter?.email,
+            isActive: municipalityAfter?.isActive,
+            updatedAt: municipalityAfter?.updatedAt
+        });
+        if (municipalityAfter && (municipalityAfter.username !== municipality.username ||
+            municipalityAfter.email !== municipality.email ||
+            municipalityAfter.isActive !== municipality.isActive ||
+            municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime())) {
+            console.log("⚠️ WARNING: Municipality was modified during company creation!");
+            console.log("Changes detected:", {
+                usernameChanged: municipalityAfter.username !== municipality.username,
+                emailChanged: municipalityAfter.email !== municipality.email,
+                isActiveChanged: municipalityAfter.isActive !== municipality.isActive,
+                updatedAtChanged: municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime()
+            });
+            const onlyUpdatedAtChanged = municipalityAfter.username === municipality.username &&
+                municipalityAfter.email === municipality.email &&
+                municipalityAfter.isActive === municipality.isActive &&
+                municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime();
+            if (onlyUpdatedAtChanged) {
+                console.log("ℹ️  INFO: Only updatedAt field changed - this is NORMAL behavior for @updatedAt fields in Prisma");
+                console.log("ℹ️  INFO: Municipality credentials were NOT modified");
+            }
+            else {
+                console.log("❌ ERROR: Municipality credentials or other fields were unexpectedly modified!");
+            }
+        }
+        else {
+            console.log("✅ Municipality was NOT modified during company creation");
+        }
         return res.status(201).json({
             ...companyWithoutPassword,
             credentials: {

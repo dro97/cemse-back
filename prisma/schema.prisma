@@ -98,6 +98,8 @@ model Profile {
   studentNotes           StudentNote[]
   moduleCertificates     ModuleCertificate[] @relation("ModuleCertificateStudent")
   youthApplications      YouthApplication[] @relation("YouthApplications")
+  events                 Event[]            @relation("EventCreator")
+  eventAttendances       EventAttendee[]    @relation("EventAttendee")
 
   @@index([userId])
   @@index([role])
@@ -1159,4 +1161,99 @@ enum CompanyInterestStatus {
   INTERVIEW_SCHEDULED
   HIRED
   NOT_INTERESTED
+}
+
+// Sistema de Eventos
+model Event {
+  id                String        @id @default(cuid())
+  title             String
+  organizer         String
+  description       String
+  date              DateTime
+  time              String        // Formato: "14:00 - 17:00"
+  registrationDeadline DateTime?  @map("registration_deadline")
+  type              EventType     @default(IN_PERSON)
+  category          EventCategory @default(NETWORKING)
+  location          String        // Dirección física o link de videoconferencia
+  maxCapacity       Int?          @map("max_capacity")
+  price             Decimal?      @default(0)
+  status            EventStatus   @default(DRAFT)
+  imageUrl          String?       @map("image_url")
+  tags              String[]
+  requirements      String[]      // Requisitos del evento
+  agenda            String[]      // Agenda del evento
+  speakers          String[]      // Ponentes/facilitadores
+  featured          Boolean       @default(false)
+  viewsCount        Int           @default(0) @map("views_count")
+  attendeesCount    Int           @default(0) @map("attendees_count")
+  attendanceRate    Decimal?      @default(0) @map("attendance_rate")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  publishedAt       DateTime?     @map("published_at")
+  
+  // Relaciones
+  createdBy         String        @map("created_by")
+  creator           Profile       @relation("EventCreator", fields: [createdBy], references: [userId])
+  attendees         EventAttendee[]
+  
+  @@index([createdBy])
+  @@index([type])
+  @@index([category])
+  @@index([status])
+  @@index([date])
+  @@index([featured])
+  @@map("events")
+}
+
+model EventAttendee {
+  id              String        @id @default(cuid())
+  eventId         String        @map("event_id")
+  attendeeId      String        @map("attendee_id")
+  status          AttendeeStatus @default(REGISTERED)
+  registeredAt    DateTime      @default(now()) @map("registered_at")
+  attendedAt      DateTime?     @map("attended_at")
+  notes           String?
+  
+  event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attendee        Profile       @relation("EventAttendee", fields: [attendeeId], references: [userId])
+  
+  @@unique([eventId, attendeeId])
+  @@index([eventId])
+  @@index([attendeeId])
+  @@index([status])
+  @@map("event_attendees")
+}
+
+enum EventType {
+  IN_PERSON
+  VIRTUAL
+  HYBRID
+}
+
+enum EventCategory {
+  NETWORKING
+  WORKSHOP
+  CONFERENCE
+  SEMINAR
+  TRAINING
+  FAIR
+  COMPETITION
+  HACKATHON
+  MEETUP
+  OTHER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum AttendeeStatus {
+  REGISTERED
+  CONFIRMED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
 }

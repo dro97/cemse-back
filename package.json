@@ -5,10 +5,9 @@
   "main": "server.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "start:prod": "node dist/server.js",
-    "postinstall": "prisma generate",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:auth": "jest auth.test.ts",

@@ -4,8 +4,8 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache libc6-compat wget
+# Install system dependencies including OpenSSL for Prisma
+RUN apk add --no-cache libc6-compat wget openssl openssl-dev
 
 # Copy package files
 COPY package.json package-lock.json ./

@@ -75,12 +75,37 @@ export const uploadSingleImageWithDebug = (req: any, res: any, next: any) => {
 
 // Enhanced middleware for news articles that ensures form fields are processed
 export const uploadNewsArticle = (req: any, res: any, next: any) => {
-  upload.fields([
+  const contentType = req.get('Content-Type');
+  
+  console.log('=== UPLOAD NEWS ARTICLE MIDDLEWARE ===');
+  console.log('Content-Type:', contentType);
+  console.log('Headers:', req.headers);
+  
+  // Since the frontend is sending multipart data with wrong Content-Type,
+  // we'll use a more permissive multer configuration
+  console.log('Using permissive multer configuration');
+  
+  // Create a multer instance that doesn't rely on Content-Type
+  const permissiveUpload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+      files: 1 // Only 1 file per request
+    }
+  }).fields([
     { name: 'image', maxCount: 1 }
-  ])(req, res, (err) => {
+  ]);
+  
+  permissiveUpload(req, res, (err) => {
     if (err) {
+      console.log('Multer error:', err);
       return next(err);
     }
+    
+    console.log('Multer processing completed');
+    console.log('req.body after multer:', req.body);
+    console.log('req.files after multer:', req.files);
     
     // Ensure form fields are available in req.body
     if (req.body) {

@@ -44,6 +44,8 @@ import CVRouter from "./cv";
 import ContactRouter from "./contacts";
 import MessageRouter from "./messages";
 import JobApplicationMessageRouter from "./jobApplicationMessages";
+import YouthApplicationRouter from "./youthapplication";
+import YouthProfileRouter from "./youth-profile";
 
 // Register routes
 router.use("/profile", ProfileRouter);
@@ -89,5 +91,7 @@ router.use("/cv", CVRouter);
 router.use("/contacts", ContactRouter);
 router.use("/messages", MessageRouter);
 router.use("/jobapplication-messages", JobApplicationMessageRouter);
+router.use("/youthapplication", YouthApplicationRouter);
+router.use("/youth-profile", YouthProfileRouter);
 
 export default router;

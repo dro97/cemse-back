@@ -98,11 +98,37 @@ import { Request, Response } from "express";
  * @swagger
  * /resources:
  *   get:
- *     summary: Get all resources
+ *     summary: Get all resources with optional filters
  *     tags: [Resources]
+ *     parameters:
+ *       - in: query
+ *         name: municipality
+ *         schema:
+ *           type: string
+ *         description: Filter by municipality name
+ *       - in: query
+ *         name: author
+ *         schema:
+ *           type: string
+ *         description: Filter by author
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter by resource type
+ *       - in: query
+ *         name: tags
+ *         schema:
+ *           type: string
+ *         description: Filter by tags (comma-separated)
  *     responses:
  *       200:
- *         description: List of all resources
+ *         description: List of filtered resources
  *         content:
  *           application/json:
  *             schema:
@@ -110,9 +136,49 @@ import { Request, Response } from "express";
  *               items:
  *                 $ref: '#/components/schemas/Resource'
  */
-export async function listResources(_req: Request, res: Response) {
-  const items = await prisma.resource.findMany();
-  return res.json(items);
+export async function listResources(req: Request, res: Response) {
+  try {
+    const { municipality, author, category, type, tags } = req.query;
+    
+    // Construir filtros
+    const where: any = {};
+    
+    if (municipality) {
+      where.OR = [
+        { author: { contains: municipality as string, mode: 'insensitive' } },
+        { title: { contains: municipality as string, mode: 'insensitive' } },
+        { description: { contains: municipality as string, mode: 'insensitive' } },
+        { tags: { hasSome: [municipality as string] } }
+      ];
+    }
+    
+    if (author) {
+      where.author = { contains: author as string, mode: 'insensitive' };
+    }
+    
+    if (category) {
+      where.category = { contains: category as string, mode: 'insensitive' };
+    }
+    
+    if (type) {
+      where.type = { contains: type as string, mode: 'insensitive' };
+    }
+    
+    if (tags) {
+      const tagArray = (tags as string).split(',').map(tag => tag.trim());
+      where.tags = { hasSome: tagArray };
+    }
+    
+    const items = await prisma.resource.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return res.json(items);
+  } catch (error) {
+    console.error("Error listing resources:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 }
 
 /**
@@ -538,5 +604,175 @@ export async function deleteResource(req: Request, res: Response): Promise<Respo
       message: "Internal server error",
       error: error.message 
     });
+  }
+} 
+
+/**
+ * @swagger
+ * /resources/municipality/{municipalityId}:
+ *   get:
+ *     summary: Get resources for a specific municipality
+ *     tags: [Resources]
+ *     parameters:
+ *       - in: path
+ *         name: municipalityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Municipality ID
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter by resource type
+ *     responses:
+ *       200:
+ *         description: List of municipality resources
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Resource'
+ *       404:
+ *         description: Municipality not found
+ */
+export async function getMunicipalityResources(req: Request, res: Response): Promise<Response> {
+  try {
+    const { municipalityId } = req.params;
+    const { category, type } = req.query;
+    
+    if (!municipalityId) {
+      return res.status(400).json({ message: "Missing municipality ID" });
+    }
+
+    // Primero verificar si el municipio existe
+    const municipality = await prisma.municipality.findUnique({
+      where: { id: municipalityId },
+      select: { id: true, name: true, department: true }
+    });
+
+    if (!municipality) {
+      return res.status(404).json({ message: "Municipality not found" });
+    }
+
+    // Construir filtros para recursos del municipio
+    const where: any = {
+      OR: [
+        { author: { contains: municipality.name, mode: 'insensitive' } },
+        { title: { contains: municipality.name, mode: 'insensitive' } },
+        { description: { contains: municipality.name, mode: 'insensitive' } },
+        { tags: { hasSome: [municipality.name, municipality.department] } }
+      ]
+    };
+
+    // Agregar filtros adicionales si se proporcionan
+    if (category) {
+      where.category = { contains: category as string, mode: 'insensitive' };
+    }
+    
+    if (type) {
+      where.type = { contains: type as string, mode: 'insensitive' };
+    }
+
+    const resources = await prisma.resource.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({
+      municipality: {
+        id: municipality.id,
+        name: municipality.name,
+        department: municipality.department
+      },
+      resources,
+      totalCount: resources.length
+    });
+  } catch (error) {
+    console.error("Error getting municipality resources:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+/**
+ * @swagger
+ * /resources/municipality/{municipalityName}/search:
+ *   get:
+ *     summary: Search resources by municipality name
+ *     tags: [Resources]
+ *     parameters:
+ *       - in: path
+ *         name: municipalityName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Municipality name to search for
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter by resource type
+ *     responses:
+ *       200:
+ *         description: List of resources for municipality
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Resource'
+ */
+export async function searchMunicipalityResources(req: Request, res: Response): Promise<Response> {
+  try {
+    const { municipalityName } = req.params;
+    const { category, type } = req.query;
+    
+    if (!municipalityName) {
+      return res.status(400).json({ message: "Missing municipality name" });
+    }
+
+    // Construir filtros para buscar recursos relacionados con el municipio
+    const where: any = {
+      OR: [
+        { author: { contains: municipalityName, mode: 'insensitive' } },
+        { title: { contains: municipalityName, mode: 'insensitive' } },
+        { description: { contains: municipalityName, mode: 'insensitive' } },
+        { tags: { hasSome: [municipalityName] } }
+      ]
+    };
+
+    // Agregar filtros adicionales si se proporcionan
+    if (category) {
+      where.category = { contains: category as string, mode: 'insensitive' };
+    }
+    
+    if (type) {
+      where.type = { contains: type as string, mode: 'insensitive' };
+    }
+
+    const resources = await prisma.resource.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({
+      searchTerm: municipalityName,
+      resources,
+      totalCount: resources.length
+    });
+  } catch (error) {
+    console.error("Error searching municipality resources:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 } 

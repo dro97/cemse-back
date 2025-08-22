@@ -97,6 +97,7 @@ model Profile {
   quizAttempts           QuizAttempt[]
   studentNotes           StudentNote[]
   moduleCertificates     ModuleCertificate[] @relation("ModuleCertificateStudent")
+  youthApplications      YouthApplication[] @relation("YouthApplications")
 
   @@index([userId])
   @@index([role])
@@ -226,6 +227,75 @@ model JobApplicationMessage {
   @@index([senderId])
   @@index([createdAt])
   @@map("job_application_messages")
+}
+
+// Nuevo sistema de postulaciones independiente
+model YouthApplication {
+  id              String                    @id @default(cuid())
+  title           String                    // Título de la postulación
+  description     String                    // Descripción de la postulación
+  cvFile          String?                   @map("cv_file")
+  coverLetterFile String?                   @map("cover_letter_file")
+  cvUrl           String?                   @map("cv_url")
+  coverLetterUrl  String?                   @map("cover_letter_url")
+  status          YouthApplicationStatus    @default(ACTIVE)
+  isPublic        Boolean                   @default(true) @map("is_public")
+  viewsCount      Int                       @default(0) @map("views_count")
+  applicationsCount Int                     @default(0) @map("applications_count")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  
+  // Relación con el perfil del joven
+  youthProfileId  String                    @map("youth_profile_id")
+  youthProfile    Profile                   @relation("YouthApplications", fields: [youthProfileId], references: [userId])
+  
+  // Relaciones
+  messages        YouthApplicationMessage[]
+  companyInterests YouthApplicationCompanyInterest[]
+  
+  @@index([youthProfileId])
+  @@index([status])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("youth_applications")
+}
+
+model YouthApplicationMessage {
+  id                String                    @id @default(cuid())
+  applicationId     String                    @map("application_id")
+  senderId          String                    @map("sender_id")
+  senderType        YouthMessageSenderType    @map("sender_type")
+  content           String
+  messageType       MessageType               @default(TEXT)
+  status            MessageStatus             @default(SENT)
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  readAt            DateTime?                 @map("read_at")
+  
+  application       YouthApplication          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  
+  @@index([applicationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("youth_application_messages")
+}
+
+model YouthApplicationCompanyInterest {
+  id              String            @id @default(cuid())
+  applicationId   String            @map("application_id")
+  companyId       String            @map("company_id")
+  status          CompanyInterestStatus @default(INTERESTED)
+  message         String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  
+  application     YouthApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@unique([applicationId, companyId])
+  @@index([applicationId])
+  @@index([companyId])
+  @@index([status])
+  @@map("youth_application_company_interests")
 }
 
 enum SenderType {
@@ -786,6 +856,7 @@ model Company {
   municipality        Municipality @relation(fields: [municipalityId], references: [id])
   jobOffers           JobOffer[]
   profiles            Profile[]    @relation("CompanyEmployees")
+  youthApplicationInterests YouthApplicationCompanyInterest[]
 
   @@unique([name, municipalityId])
   @@unique([username], map: "company_username_unique")
@@ -1068,4 +1139,24 @@ enum ResourceType {
   LINK
   ZIP
   OTHER
+}
+
+enum YouthApplicationStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+  HIRED
+}
+
+enum YouthMessageSenderType {
+  YOUTH
+  COMPANY
+}
+
+enum CompanyInterestStatus {
+  INTERESTED
+  CONTACTED
+  INTERVIEW_SCHEDULED
+  HIRED
+  NOT_INTERESTED
 }

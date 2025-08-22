@@ -145,13 +145,45 @@ export async function municipalityLogin(req: Request, res: Response): Promise<Re
  */
 export async function getMunicipalityProfile(req: Request, res: Response): Promise<Response> {
   try {
-    const municipalityId = (req as any).user?.id;
+    console.log("🔍 MUNICIPALITY PROFILE DEBUG: Function called");
+    console.log("🔍 MUNICIPALITY PROFILE DEBUG: User object:", (req as any).user);
     
-    if (!municipalityId) {
+    const user = (req as any).user;
+    
+    if (!user) {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: No user found");
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const municipality = await prisma.municipality.findUnique({
+    let municipalityId = user.id;
+    let municipality = null;
+
+    // If user is municipality type, use the ID directly
+    if (user.type === 'municipality') {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is municipality type, using ID directly");
+      municipality = await prisma.municipality.findUnique({
+        where: { id: municipalityId }
+      });
+    }
+    // If user is user type with MUNICIPAL_GOVERNMENTS role, find municipality by username
+    else if (user.type === 'user' && user.role === 'MUNICIPAL_GOVERNMENTS') {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: User is user type with MUNICIPAL_GOVERNMENTS role, finding municipality by username");
+      municipality = await prisma.municipality.findUnique({
+        where: { username: user.username }
+      });
+      if (municipality) {
+        municipalityId = municipality.id;
+      }
+    }
+
+    if (!municipality) {
+      console.log("🔍 MUNICIPALITY PROFILE DEBUG: Municipality not found");
+      return res.status(404).json({ message: "Municipality not found" });
+    }
+
+    console.log("🔍 MUNICIPALITY PROFILE DEBUG: Municipality found:", municipality.id);
+
+    const municipalityData = await prisma.municipality.findUnique({
       where: { id: municipalityId },
       select: {
         id: true,
@@ -182,11 +214,11 @@ export async function getMunicipalityProfile(req: Request, res: Response): Promi
       }
     });
 
-    if (!municipality) {
+    if (!municipalityData) {
       return res.status(404).json({ message: "Municipality not found" });
     }
 
-    return res.json({ municipality });
+    return res.json({ municipality: municipalityData });
 
   } catch (error) {
     console.error("Error getting municipality profile:", error);

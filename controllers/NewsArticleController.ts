@@ -3,6 +3,41 @@ import { Request, Response } from "express";
 import { NewsStatus, NewsPriority, NewsType } from "@prisma/client";
 import { getFileUrl, deleteFile } from "../middleware/upload";
 
+// Helper function to get the correct authorId for a user
+async function getUserAuthorId(user: any): Promise<string> {
+  if (user.type === 'company' || user.role === 'COMPANIES') {
+    const profile = await prisma.profile.findFirst({
+      where: { companyId: user.id },
+      select: { userId: true }
+    });
+    if (profile) {
+      return profile.userId;
+    }
+  } else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
+    // Find the municipality created by this user
+    const municipality = await prisma.municipality.findFirst({
+      where: { createdBy: user.id },
+      select: { id: true }
+    });
+    
+    if (municipality) {
+      const profile = await prisma.profile.findFirst({
+        where: { userId: municipality.id },
+        select: { userId: true }
+      });
+      if (profile) {
+        return profile.userId;
+      } else {
+        // If no profile exists, use the municipality ID directly
+        return municipality.id;
+      }
+    }
+  }
+  
+  // Default to user ID
+  return user.id;
+}
+
 /**
  * @swagger
  * /api/newsarticle:
@@ -27,6 +62,16 @@ import { getFileUrl, deleteFile } from "../middleware/upload";
  *         schema:
  *           type: string
  *         description: Filter by author type (COMPANY, GOVERNMENT, NGO)
+ *       - in: query
+ *         name: authorId
+ *         schema:
+ *           type: string
+ *         description: Filter by specific author ID
+ *       - in: query
+ *         name: municipalityId
+ *         schema:
+ *           type: string
+ *         description: Filter by municipality ID (returns articles from all companies and the municipality itself)
  *     responses:
  *       200:
  *         description: List of news articles
@@ -34,7 +79,7 @@ import { getFileUrl, deleteFile } from "../middleware/upload";
 export async function listNewsArticles(req: Request, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
-    const { status, category, authorType, authorId } = req.query;
+    const { status, category, authorType, authorId, municipalityId } = req.query;
     
     // Build where clause
     let whereClause: any = {};
@@ -75,10 +120,48 @@ export async function listNewsArticles(req: Request, res: Response): Promise<Res
     if (authorType) {
       whereClause.authorType = authorType;
     }
-    if (authorId) {
-      // If specific authorId is requested, override other filters
+    
+    // Handle municipality filtering
+    if (municipalityId) {
+      console.log('Filtering by municipalityId:', municipalityId);
+      
+      // Get all profiles that belong to companies in this municipality
+      const municipalityCompanies = await prisma.company.findMany({
+        where: { municipalityId: municipalityId as string },
+        select: { id: true }
+      });
+      
+      const companyIds = municipalityCompanies.map(company => company.id);
+      console.log('Found companies in municipality:', companyIds);
+      
+      // Get all profiles that belong to these companies
+      const municipalityProfiles = await prisma.profile.findMany({
+        where: { 
+          OR: [
+            { companyId: { in: companyIds } },
+            { userId: municipalityId as string } // Also include the municipality itself
+          ]
+        },
+        select: { userId: true }
+      });
+      
+      const profileUserIds = municipalityProfiles.map(profile => profile.userId);
+      console.log('Found profile user IDs:', profileUserIds);
+      
+      // Filter articles by these author IDs
+      if (profileUserIds.length > 0) {
+        whereClause.authorId = { in: profileUserIds };
+      } else {
+        // If no profiles found, return empty result
+        console.log('No profiles found for municipality, returning empty result');
+        return res.json([]);
+      }
+    } else if (authorId) {
+      // If specific authorId is requested, use it directly
       whereClause.authorId = authorId;
     }
+    
+    console.log('Final whereClause:', JSON.stringify(whereClause, null, 2));
     
     const articles = await prisma.newsArticle.findMany({
       where: whereClause,
@@ -88,6 +171,8 @@ export async function listNewsArticles(req: Request, res: Response): Promise<Res
         { createdAt: 'desc' }
       ]
     });
+    
+    console.log('Found articles:', articles.length);
     
     return res.json(articles);
   } catch (error: any) {
@@ -110,7 +195,7 @@ export async function listNewsArticles(req: Request, res: Response): Promise<Res
  *         name: category
  *         schema:
  *           type: string
- *         description: Filter by category (e.g., "Educación", "Empleo", "Programas Sociales")
+ *         description: Filter by category (e.g., Educación, Empleo, Programas Sociales)
  *       - in: query
  *         name: authorType
  *         schema:
@@ -120,7 +205,7 @@ export async function listNewsArticles(req: Request, res: Response): Promise<Res
  *         name: region
  *         schema:
  *           type: string
- *         description: Filter by region (e.g., "La Paz", "Cochabamba", "Santa Cruz")
+ *         description: Filter by region (e.g., La Paz, Cochabamba, Santa Cruz)
  *       - in: query
  *         name: priority
  *         schema:
@@ -381,8 +466,16 @@ export async function getNewsArticle(req: Request, res: Response): Promise<Respo
     }
     
     // Check access permissions
-    if (article.status !== 'PUBLISHED' && (!user || user.id !== article.authorId)) {
-      return res.status(403).json({ message: "Access denied" });
+    if (article.status !== 'PUBLISHED') {
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const userAuthorId = await getUserAuthorId(user);
+      
+      if (userAuthorId !== article.authorId && user.role !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
     
     // Increment view count
@@ -478,19 +571,53 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
     }
     
     // Only companies, municipalities, and admins can create news articles
-    if (!['company', 'municipality'].includes(user.type) && user.role !== 'SUPERADMIN') {
+    const allowedTypes = ['company', 'municipality'];
+    const allowedRoles = ['SUPERADMIN', 'MUNICIPAL_GOVERNMENTS'];
+    
+    const hasValidType = user.type && allowedTypes.includes(user.type);
+    const hasValidRole = user.role && allowedRoles.includes(user.role);
+    
+    if (!hasValidType && !hasValidRole) {
       return res.status(403).json({ message: "Only companies, municipalities, and admins can create news articles" });
     }
     
     // Extract data from multer (form fields and files) or JSON
-    const formData = req.body || {};
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } || {};
+    
+    // Handle both JSON and form data
+    const contentType = req.get('Content-Type');
+    const isJsonRequest = contentType && contentType.includes('application/json');
+    
+    // Debug logging for form data processing
+    console.log('=== FORM DATA DEBUG ===');
+    console.log('Content-Type:', contentType);
+    console.log('Is JSON request:', isJsonRequest);
+    console.log('req.body keys:', Object.keys(req.body || {}));
+    console.log('req.body.title:', req.body.title);
+    console.log('req.body.content:', req.body.content);
+    console.log('req.body.summary:', req.body.summary);
+    console.log('req.body.category:', req.body.category);
+    console.log('req.files:', req.files);
+    console.log('========================');
+    
+    // For JSON requests, validate that we have the required fields
+    if (isJsonRequest && (!req.body || !req.body.title)) {
+      return res.status(400).json({ 
+        message: "Invalid JSON data. Required fields: title, content, summary, category",
+        debug: {
+          contentType: contentType,
+          isJsonRequest: isJsonRequest,
+          bodyExists: !!req.body,
+          bodyKeys: req.body ? Object.keys(req.body) : []
+        }
+      });
+    }
     
     // Debug logging
     console.log('=== DEBUG: News Article Creation ===');
     console.log('req.body:', JSON.stringify(req.body, null, 2));
     console.log('req.files:', JSON.stringify(req.files, null, 2));
-    console.log('formData:', JSON.stringify(formData, null, 2));
+    console.log('req.body:', JSON.stringify(req.body, null, 2));
     console.log('Content-Type:', (req as any).get('Content-Type'));
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
     console.log('Method:', req.method);
@@ -498,35 +625,35 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
     console.log('=====================================');
     
     // Get text fields from form data or JSON body
-    const title = formData.title;
-    const content = formData.content;
-    const summary = formData.summary;
-    const category = formData.category;
-    const priority = formData.priority || 'MEDIUM';
-    const status = formData.status || 'DRAFT';
+    const title = req.body.title;
+    const content = req.body.content;
+    const summary = req.body.summary;
+    const category = req.body.category;
+    const priority = req.body.priority || 'MEDIUM';
+    const status = req.body.status || 'DRAFT';
     
     // Process tags - convert string to array if needed
-    let tags = formData.tags || [];
+    let tags = req.body.tags || [];
     if (typeof tags === 'string') {
       tags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
     }
     
     // Process featured - convert string to boolean if needed
-    let featured = formData.featured || false;
+    let featured = req.body.featured || false;
     if (typeof featured === 'string') {
       featured = featured === 'true';
     }
     
     // Process targetAudience - convert string to array if needed
-    let targetAudience = formData.targetAudience || [];
+    let targetAudience = req.body.targetAudience || [];
     if (typeof targetAudience === 'string') {
       targetAudience = [targetAudience];
     }
     
-    const region = formData.region;
-    const imageUrl = formData.imageUrl;
-    const videoUrl = formData.videoUrl;
-    const relatedLinks = formData.relatedLinks;
+    const region = req.body.region;
+    const imageUrl = req.body.imageUrl;
+    const videoUrl = req.body.videoUrl;
+    const relatedLinks = req.body.relatedLinks;
 
     // Handle uploaded image file
     let finalImageUrl = imageUrl;
@@ -537,7 +664,24 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
     // Validate required fields
     if (!title?.trim() || !content?.trim() || !summary?.trim() || !category?.trim()) {
       return res.status(400).json({ 
-        message: "Title, content, summary, and category are required" 
+        message: "Title, content, summary, and category are required",
+        received: { 
+          title: title?.trim(), 
+          content: content?.trim(), 
+          summary: summary?.trim(), 
+          category: category?.trim() 
+        },
+        debug: {
+          contentType: contentType,
+          isJsonRequest: isJsonRequest,
+          bodyKeys: Object.keys(req.body || {}),
+          bodyValues: {
+            title: req.body.title,
+            content: req.body.content,
+            summary: req.body.summary,
+            category: req.body.category
+          }
+        }
       });
     }
     
@@ -557,11 +701,11 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
       });
     }
     
-    // Determine author type based on user type
+    // Determine author type based on user type or role
     let authorType: NewsType;
-    if (user.type === 'company') {
+    if (user.type === 'company' || user.role === 'COMPANIES') {
       authorType = 'COMPANY';
-    } else if (user.type === 'municipality') {
+    } else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
       authorType = 'GOVERNMENT';
     } else {
       authorType = 'GOVERNMENT'; // Default for admins
@@ -571,29 +715,109 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
     console.log('=== AUTHOR DEBUG ===');
     console.log('User ID:', user.id);
     console.log('User type:', user.type);
+    console.log('User role:', user.role);
+    console.log('Request authorId:', req.body.authorId);
+    console.log('Request authorName:', req.body.authorName);
     
-    let authorId = user.id; // Use the user ID directly as authorId
-    let authorName = '';
+    let authorId: string;
+    let authorName: string;
     
-    if (user.type === 'company') {
-      // Get company name
+    if (user.type === 'company' || user.role === 'COMPANIES') {
+      // For companies, we need to find the profile associated with this company
       const company = await prisma.company.findUnique({
         where: { id: user.id },
-        select: { name: true }
+        select: { id: true, name: true }
       });
-      authorName = company?.name || 'Company';
+      
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+      
+      // Find the profile for this company
+      const profile = await prisma.profile.findFirst({
+        where: { companyId: user.id },
+        select: { userId: true, firstName: true, lastName: true }
+      });
+      
+      if (!profile) {
+        // Create a profile for the company if it doesn't exist
+        const newProfile = await prisma.profile.create({
+          data: {
+            userId: user.id, // Use the company ID as userId
+            firstName: company.name,
+            lastName: '',
+            email: user.email || '',
+            role: 'COMPANIES' as any,
+            companyId: user.id
+          }
+        });
+        authorId = newProfile.userId;
+        authorName = company.name;
+      } else {
+        authorId = profile.userId;
+        authorName = company.name;
+      }
+      
       console.log('Company found:', company);
-    } else if (user.type === 'municipality') {
-      // Get municipality name
-      const municipality = await prisma.municipality.findUnique({
-        where: { id: user.id },
-        select: { name: true }
+      console.log('Profile for company:', profile);
+      
+    } else if (user.type === 'municipality' || user.role === 'MUNICIPAL_GOVERNMENTS') {
+      // For municipality users, use their own ID as authorId
+      console.log('Processing municipality user');
+      
+      // Find or create profile for this user
+      const profile = await prisma.profile.findUnique({
+        where: { userId: user.id },
+        select: { userId: true, firstName: true, lastName: true }
       });
-      authorName = municipality?.name || 'Municipality';
-      console.log('Municipality found:', municipality);
+      
+      if (!profile) {
+        // Create a profile for the municipality user if it doesn't exist
+        const newProfile = await prisma.profile.create({
+          data: {
+            userId: user.id,
+            firstName: req.body.authorName || user.username,
+            lastName: '',
+            email: user.email || '',
+            role: 'MUNICIPAL_GOVERNMENTS' as any
+          }
+        });
+        authorId = newProfile.userId;
+        authorName = req.body.authorName || user.username;
+      } else {
+        authorId = profile.userId;
+        authorName = req.body.authorName || profile.firstName || user.username;
+      }
+      
+      console.log('Municipality user profile found/created:', profile);
+      
     } else {
-      authorName = 'Admin';
+      // For admins, use the user ID directly
+      const profile = await prisma.profile.findUnique({
+        where: { userId: user.id },
+        select: { userId: true, firstName: true, lastName: true }
+      });
+      
+      if (!profile) {
+        // Create a basic profile for admin
+        const newProfile = await prisma.profile.create({
+          data: {
+            userId: user.id,
+            firstName: 'Admin',
+            lastName: '',
+            email: user.email || '',
+            role: 'SUPERADMIN' as any
+          }
+        });
+        authorId = newProfile.userId;
+        authorName = 'Admin';
+      } else {
+        authorId = profile.userId;
+        authorName = profile.firstName || 'Admin';
+      }
+      
       console.log('Admin user');
+      console.log('Profile for admin:', profile);
     }
     
     console.log('Final authorId:', authorId);
@@ -714,44 +938,45 @@ export async function updateNewsArticle(req: Request, res: Response): Promise<Re
     }
     
     // Check ownership or admin rights
-    if (article.authorId !== user.id && user.role !== 'SUPERADMIN') {
+    const userAuthorId = await getUserAuthorId(user);
+    
+    if (article.authorId !== userAuthorId && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied. Only the author or admin can update this article" });
     }
     
     // Extract data from multer (form fields and files)
-    const formData = req.body || {};
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } || {};
     
     // Get text fields from form data (now directly from req.body)
-    const title = formData.title;
-    const content = formData.content;
-    const summary = formData.summary;
-    const category = formData.category;
-    const priority = formData.priority;
-    const status = formData.status;
+    const title = req.body.title;
+    const content = req.body.content;
+    const summary = req.body.summary;
+    const category = req.body.category;
+    const priority = req.body.priority;
+    const status = req.body.status;
     
     // Process tags - convert string to array if needed
-    let tags = formData.tags;
+    let tags = req.body.tags;
     if (tags !== undefined && typeof tags === 'string') {
       tags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
     }
     
     // Process featured - convert string to boolean if needed
-    let featured = formData.featured;
+    let featured = req.body.featured;
     if (featured !== undefined && typeof featured === 'string') {
       featured = featured === 'true';
     }
     
     // Process targetAudience - convert string to array if needed
-    let targetAudience = formData.targetAudience;
+    let targetAudience = req.body.targetAudience;
     if (targetAudience !== undefined && typeof targetAudience === 'string') {
       targetAudience = [targetAudience];
     }
     
-    const region = formData.region;
-    const imageUrl = formData.imageUrl;
-    const videoUrl = formData.videoUrl;
-    const relatedLinks = formData.relatedLinks;
+    const region = req.body.region;
+    const imageUrl = req.body.imageUrl;
+    const videoUrl = req.body.videoUrl;
+    const relatedLinks = req.body.relatedLinks;
 
     // Handle uploaded image file
     let finalImageUrl = imageUrl;
@@ -876,26 +1101,10 @@ export async function deleteNewsArticle(req: Request, res: Response): Promise<Re
       return res.status(404).json({ message: "News article not found" });
     }
     
-    // Get user profile to check ownership
-    let userProfile = await prisma.profile.findUnique({
-      where: { userId: user.id }
-    });
-    
-    if (!userProfile) {
-      // Create a minimal profile if it doesn't exist
-      userProfile = await prisma.profile.create({
-        data: {
-          userId: user.id,
-          firstName: user.type === 'company' ? 'Company' : user.type === 'municipality' ? 'Municipality' : 'Admin',
-          lastName: '',
-          email: '',
-          role: user.role || 'COMPANIES'
-        }
-      });
-    }
-    
     // Check ownership or admin rights
-    if (article.authorId !== userProfile.id && user.role !== 'SUPERADMIN') {
+    const userAuthorId = await getUserAuthorId(user);
+    
+    if (article.authorId !== userAuthorId && user.role !== 'SUPERADMIN') {
       return res.status(403).json({ message: "Access denied. Only the author or admin can delete this article" });
     }
     

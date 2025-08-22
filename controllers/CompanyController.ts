@@ -223,6 +223,7 @@ export async function searchCompanies(req: Request, res: Response): Promise<Resp
       businessSector,
       companySize,
       institutionId,
+      municipalityId,
       department,
       foundedYear,
       isActive,
@@ -241,8 +242,11 @@ export async function searchCompanies(req: Request, res: Response): Promise<Resp
     } else if (user && user.type === 'company') {
       whereClause.id = user.id;
     } else {
-      // For other users, only show active companies
-      whereClause.isActive = true;
+      // For other users, only show active companies by default
+      // But allow municipalityId filter to override this
+      if (!municipalityId) {
+        whereClause.isActive = true;
+      }
     }
 
     // Apply search query
@@ -264,7 +268,10 @@ export async function searchCompanies(req: Request, res: Response): Promise<Resp
       whereClause.companySize = companySize;
     }
 
-    if (institutionId) {
+    if (municipalityId) {
+      // municipalityId filter takes precedence over user type restrictions
+      whereClause.municipalityId = municipalityId;
+    } else if (institutionId) {
       whereClause.municipalityId = institutionId;
     }
 
@@ -344,6 +351,7 @@ export async function searchCompanies(req: Request, res: Response): Promise<Resp
           businessSector,
           companySize,
           institutionId,
+          municipalityId,
           department,
           foundedYear,
           isActive
@@ -627,6 +635,10 @@ export async function getCompany(req: Request, res: Response): Promise<Response>
  */
 export async function createCompany(req: Request, res: Response): Promise<Response> {
   try {
+    // IMPORTANTE: Cuando un municipio crea una empresa, el sistema puede crear un usuario adicional
+    // en la tabla 'users' para satisfacer la relación Company.creator que requiere un User.
+    // Esto es necesario debido a la estructura del esquema de Prisma.
+    
     // Check if user is Municipal Government, Municipality, or SuperAdmin
     const user = (req as any).user;
     console.log("User object:", user); // Debug log
@@ -749,6 +761,15 @@ export async function createCompany(req: Request, res: Response): Promise<Respon
       });
     }
 
+    // Log municipality state BEFORE company creation
+    console.log("Municipality state BEFORE company creation:", {
+      id: municipality.id,
+      username: municipality.username,
+      email: municipality.email,
+      isActive: municipality.isActive,
+      updatedAt: municipality.updatedAt
+    });
+
     // Hash the password
     const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -756,23 +777,35 @@ export async function createCompany(req: Request, res: Response): Promise<Respon
     // Determine the createdBy field based on user type
     let createdBy = user.id;
     
-    // If user is a municipality, we need to find or create a corresponding user
+    // If user is a municipality, we need to handle the createdBy field carefully
     if (isMunicipality) {
-      // Check if there's already a user for this institution
+      // Check if there's already a user for this municipality
       let institutionUser = await prisma.user.findFirst({
         where: { username: user.username }
       });
       
       if (!institutionUser) {
-        // Create a user record for the institution if it doesn't exist
+        // Create a user record for the municipality if it doesn't exist
+        // This is necessary because the Company.creator relation requires a User
         institutionUser = await prisma.user.create({
           data: {
             username: user.username,
-            password: 'institution_user', // This won't be used for login
+            password: user.password, // Use the same password as municipality
             role: UserRole.MUNICIPAL_GOVERNMENTS,
             isActive: true
           }
         });
+        console.log("Created user record for municipality:", institutionUser.id);
+      } else {
+        console.log("Found existing user record for municipality:", institutionUser.id);
+        // Update the user password to match municipality if it's different
+        if (institutionUser.password !== user.password) {
+          await prisma.user.update({
+            where: { id: institutionUser.id },
+            data: { password: user.password }
+          });
+          console.log("Updated user password to match municipality");
+        }
       }
       
       createdBy = institutionUser.id;
@@ -818,6 +851,51 @@ export async function createCompany(req: Request, res: Response): Promise<Respon
 
     // Don't return the password in the response
     const { password: _, ...companyWithoutPassword } = company;
+    
+    // Log municipality state AFTER company creation to check for any modifications
+    const municipalityAfter = await prisma.municipality.findUnique({
+      where: { id: finalMunicipalityId }
+    });
+    
+    console.log("Municipality state AFTER company creation:", {
+      id: municipalityAfter?.id,
+      username: municipalityAfter?.username,
+      email: municipalityAfter?.email,
+      isActive: municipalityAfter?.isActive,
+      updatedAt: municipalityAfter?.updatedAt
+    });
+    
+    // Check if municipality was modified
+    if (municipalityAfter && (
+      municipalityAfter.username !== municipality.username ||
+      municipalityAfter.email !== municipality.email ||
+      municipalityAfter.isActive !== municipality.isActive ||
+      municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime()
+    )) {
+      console.log("⚠️ WARNING: Municipality was modified during company creation!");
+      console.log("Changes detected:", {
+        usernameChanged: municipalityAfter.username !== municipality.username,
+        emailChanged: municipalityAfter.email !== municipality.email,
+        isActiveChanged: municipalityAfter.isActive !== municipality.isActive,
+        updatedAtChanged: municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime()
+      });
+      
+      // Check if only updatedAt changed (which is normal)
+      const onlyUpdatedAtChanged = 
+        municipalityAfter.username === municipality.username &&
+        municipalityAfter.email === municipality.email &&
+        municipalityAfter.isActive === municipality.isActive &&
+        municipalityAfter.updatedAt.getTime() !== municipality.updatedAt.getTime();
+      
+      if (onlyUpdatedAtChanged) {
+        console.log("ℹ️  INFO: Only updatedAt field changed - this is NORMAL behavior for @updatedAt fields in Prisma");
+        console.log("ℹ️  INFO: Municipality credentials were NOT modified");
+      } else {
+        console.log("❌ ERROR: Municipality credentials or other fields were unexpectedly modified!");
+      }
+    } else {
+      console.log("✅ Municipality was NOT modified during company creation");
+    }
     
     // Return company data with credentials info
     return res.status(201).json({

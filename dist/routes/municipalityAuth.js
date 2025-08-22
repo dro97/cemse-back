@@ -8,5 +8,6 @@ router.use(auth_1.authenticateToken);
 router.use(auth_1.requireMunicipality);
 router.get("/me", MunicipalityAuthController_1.getMunicipalityProfile);
 router.post("/change-password", MunicipalityAuthController_1.changeMunicipalityPassword);
+router.put("/update-profile", MunicipalityAuthController_1.updateMunicipalityProfile);
 exports.default = router;
 //# sourceMappingURL=municipalityAuth.js.map

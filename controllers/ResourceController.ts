@@ -258,7 +258,7 @@ export async function createResource(req: Request, res: Response): Promise<Respo
       downloadUrl = (req as any).uploadedResource.url;
       filePath = (req as any).uploadedResource.filename;
       fileSize = (req as any).uploadedResource.size;
-      thumbnail = downloadUrl; // Use the uploaded file as thumbnail for now
+      thumbnail = downloadUrl || ''; // Use the uploaded file as thumbnail for now
       console.log('📁 [DEBUG] Resource URL desde uploadedResource:', downloadUrl);
     } else if (files['file'] && files['file'][0]) {
       // Fallback to local file if MinIO upload failed
@@ -267,11 +267,11 @@ export async function createResource(req: Request, res: Response): Promise<Respo
       downloadUrl = `/uploads/resources/${file.filename}`;
       filePath = file.path;
       fileSize = file?.size;
-      thumbnail = downloadUrl;
+      thumbnail = downloadUrl || '';
     } else if (externalUrl) {
       // For external links, use the URL directly
       downloadUrl = externalUrl;
-      thumbnail = externalUrl;
+      thumbnail = externalUrl || '';
     } else {
       return res.status(400).json({ 
         message: "Either a file or externalUrl must be provided" 
@@ -418,7 +418,7 @@ export async function updateResource(req: Request, res: Response): Promise<Respo
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } || {};
 
     let downloadUrl = existingResource.downloadUrl;
-    let thumbnail = existingResource.thumbnail;
+    let thumbnail: string = existingResource.thumbnail || '';
     let filePath = '';
     let fileSize = 0;
 
@@ -428,17 +428,17 @@ export async function updateResource(req: Request, res: Response): Promise<Respo
       downloadUrl = (req as any).uploadedResource.url;
       filePath = (req as any).uploadedResource.filename;
       fileSize = (req as any).uploadedResource.size;
-      thumbnail = downloadUrl;
+      thumbnail = downloadUrl || '';
     } else if (files['file'] && files['file'][0]) {
       console.log('⚠️ [DEBUG] Fallback a archivo local para actualización');
       const file = files['file'][0];
       downloadUrl = `/uploads/resources/${file.filename}`;
       filePath = file.path;
       fileSize = file?.size;
-      thumbnail = downloadUrl;
+      thumbnail = downloadUrl || '';
     } else if (externalUrl) {
       downloadUrl = externalUrl;
-      thumbnail = externalUrl;
+      thumbnail = externalUrl || '';
     }
 
     // Parse tags if provided

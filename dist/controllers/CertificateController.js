@@ -6,17 +6,91 @@ exports.createCertificate = createCertificate;
 exports.updateCertificate = updateCertificate;
 exports.deleteCertificate = deleteCertificate;
 const prisma_1 = require("../lib/prisma");
-async function listCertificates(_req, res) {
-    const items = await prisma_1.prisma.certificate.findMany();
-    return res.json(items);
+async function listCertificates(req, res) {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        let whereClause = {};
+        if (user.type === 'user' && user.role !== 'SUPERADMIN') {
+            whereClause.userId = user.id;
+        }
+        const certificates = await prisma_1.prisma.certificate.findMany({
+            where: whereClause,
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true
+                    }
+                },
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: {
+                issuedAt: 'desc'
+            }
+        });
+        return res.json(certificates);
+    }
+    catch (error) {
+        console.error("Error listing certificates:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 }
 async function getCertificate(req, res) {
-    const item = await prisma_1.prisma.certificate.findUnique({
-        where: { id: req.params['id'] || "" }
-    });
-    if (!item)
-        return res.status(404).json({ message: "Not found" });
-    return res.json(item);
+    try {
+        const user = req.user;
+        const { id } = req.params;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
+        }
+        const certificate = await prisma_1.prisma.certificate.findUnique({
+            where: { id: id || '' },
+            include: {
+                course: {
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true
+                    }
+                },
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!certificate) {
+            return res.status(404).json({ message: "Certificate not found" });
+        }
+        if (user.type === 'user' && certificate.userId !== user.id && user.role !== 'SUPERADMIN') {
+            return res.status(403).json({ message: "Access denied" });
+        }
+        return res.json(certificate);
+    }
+    catch (error) {
+        console.error("Error getting certificate:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 }
 async function createCertificate(req, res) {
     const { title, description, criteria, verificationCode } = req.body;

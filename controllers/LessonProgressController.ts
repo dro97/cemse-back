@@ -573,7 +573,7 @@ export async function getCourseProgress(req: Request, res: Response): Promise<Re
 }
 
 // Función para verificar si se completó un módulo y generar certificado
-async function checkModuleCompletionAndGenerateCertificate(enrollmentId: string, lessonId: string) {
+async function checkModuleCompletionAndGenerateCertificate(enrollmentId: string, lessonId: string): Promise<void> {
   try {
     // Obtener la lección y su módulo
     const lesson = await prisma.lesson.findUnique({
@@ -755,7 +755,7 @@ async function checkModuleCompletionAndGenerateCertificate(enrollmentId: string,
       // Después de generar el certificado del módulo, verificar si se completó todo el curso
       await checkCourseCompletionAndGenerateCertificate(enrollmentId, lesson.module.course.id);
 
-      return certificate;
+      // Certificate generated successfully
     }
   } catch (error) {
     console.error('Error verificando completación de módulo:', error);
@@ -763,7 +763,7 @@ async function checkModuleCompletionAndGenerateCertificate(enrollmentId: string,
 }
 
 // Función para verificar si se completó todo el curso y generar certificado
-async function checkCourseCompletionAndGenerateCertificate(enrollmentId: string, courseId: string) {
+async function checkCourseCompletionAndGenerateCertificate(enrollmentId: string, courseId: string): Promise<void> {
   try {
     // Obtener el enrollment para saber el estudiante
     const enrollment = await prisma.courseEnrollment.findUnique({
@@ -875,7 +875,7 @@ async function checkCourseCompletionAndGenerateCertificate(enrollmentId: string,
       console.log(`   🔐 Código de verificación: ${certificate.verificationCode}`);
       console.log(`   🔗 URL: ${certificate.url}`);
 
-      return certificate;
+      // Certificate generated successfully
     }
   } catch (error) {
     console.error('Error verificando completación de curso:', error);

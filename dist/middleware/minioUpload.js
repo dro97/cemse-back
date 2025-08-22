@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = void 0;
+exports.uploadResourceToMinIO = exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = void 0;
 const multer_1 = __importDefault(require("multer"));
 const minio_1 = require("../lib/minio");
 const path_1 = __importDefault(require("path"));
@@ -272,4 +272,113 @@ const uploadLessonResourceToMinIO = (req, res, next) => {
     });
 };
 exports.uploadLessonResourceToMinIO = uploadLessonResourceToMinIO;
+const uploadResourceToMinIO = (req, res, next) => {
+    (0, multer_1.default)({
+        storage: multer_1.default.memoryStorage(),
+        limits: {
+            fileSize: 100 * 1024 * 1024,
+            files: 1
+        },
+        fileFilter: (_req, file, cb) => {
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'application/zip',
+                'application/x-zip-compressed',
+                'application/rar',
+                'application/x-rar-compressed',
+                'video/mp4',
+                'video/webm',
+                'video/ogg',
+                'video/avi',
+                'video/mov',
+                'video/wmv',
+                'video/flv',
+                'video/mkv',
+                'audio/mpeg',
+                'audio/wav',
+                'audio/ogg',
+                'audio/mp3',
+                'audio/aac',
+                'audio/flac',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
+                'image/bmp',
+                'image/tiff',
+                'text/plain',
+                'text/csv',
+                'text/html',
+                'text/css',
+                'text/javascript',
+                'application/json',
+                'application/xml'
+            ];
+            if (allowedTypes.includes(file?.mimetype)) {
+                cb(null, true);
+            }
+            else {
+                cb(new Error(`Tipo de archivo no permitido: ${file?.mimetype}`));
+            }
+        }
+    }).fields([
+        { name: 'file', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.files && req.files['file'] && req.files['file'][0]) {
+            try {
+                const file = req.files['file'][0];
+                console.log('📁 [DEBUG] Archivo de recurso recibido:', {
+                    originalname: file?.originalname,
+                    mimetype: file?.mimetype,
+                    size: file?.size,
+                    bufferLength: file.buffer.length
+                });
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = path_1.default.extname(file?.originalname);
+                const filename = `general-resource-${uniqueSuffix}${ext}`;
+                console.log('📝 [DEBUG] Nombre del objeto generado:', filename);
+                let bucket = 'resources';
+                if (file?.mimetype.startsWith('image/')) {
+                    bucket = 'images';
+                }
+                else if (file?.mimetype.startsWith('video/')) {
+                    bucket = 'videos';
+                }
+                else if (file?.mimetype.startsWith('audio/')) {
+                    bucket = 'audio';
+                }
+                console.log('☁️ [DEBUG] Subiendo archivo a MinIO bucket:', bucket);
+                const url = await (0, minio_1.uploadToMinio)(bucket, filename, file?.buffer || Buffer.alloc(0), file?.mimetype);
+                console.log('✅ Archivo subido exitosamente:', url);
+                req.uploadedResource = {
+                    url: url,
+                    filename: filename,
+                    originalName: file?.originalname,
+                    size: file?.size,
+                    mimetype: file?.mimetype,
+                    bucket: bucket
+                };
+                console.log('✅ [DEBUG] Archivo subido a MinIO:', url);
+                console.log('📋 [DEBUG] (req as any).uploadedResource configurado:', req.uploadedResource);
+            }
+            catch (error) {
+                console.error('❌ [ERROR] Error uploading to MinIO:', error);
+                return next(error);
+            }
+        }
+        next();
+    });
+};
+exports.uploadResourceToMinIO = uploadResourceToMinIO;
 //# sourceMappingURL=minioUpload.js.map

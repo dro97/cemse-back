@@ -121,6 +121,7 @@ app.use('/api/quizquestion', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/api/quizattempt', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/api/quizanswer', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/api/course-enrollments', (0, body_parser_1.json)({ limit: '10mb' }));
+app.use('/api/course-progress', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/api/newsarticle/json', (0, body_parser_1.json)({ limit: '10mb' }));
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, 'uploads')));
 app.io = io;

@@ -174,6 +174,11 @@ async function createLessonProgress(req, res) {
                     }
                 }
             });
+            if (isCompleted && !existingProgress.isCompleted) {
+                checkModuleCompletionAndGenerateCertificate(enrollmentId, lessonId).catch(error => {
+                    console.error('Error verificando completación de módulo:', error);
+                });
+            }
             return res.json(updated);
         }
         else {
@@ -197,6 +202,11 @@ async function createLessonProgress(req, res) {
                     }
                 }
             });
+            if (isCompleted) {
+                checkModuleCompletionAndGenerateCertificate(enrollmentId, lessonId).catch(error => {
+                    console.error('Error verificando completación de módulo:', error);
+                });
+            }
             return res.status(201).json(newItem);
         }
     }
@@ -362,6 +372,252 @@ async function getCourseProgress(req, res) {
             message: "Internal server error",
             error: error.message
         });
+    }
+}
+async function checkModuleCompletionAndGenerateCertificate(enrollmentId, lessonId) {
+    try {
+        const lesson = await prisma_1.prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: {
+                module: {
+                    select: {
+                        id: true,
+                        title: true,
+                        hasCertificate: true,
+                        course: {
+                            select: {
+                                id: true,
+                                title: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        if (!lesson || !lesson.module) {
+            console.log('Lección o módulo no encontrado');
+            return;
+        }
+        const enrollment = await prisma_1.prisma.courseEnrollment.findUnique({
+            where: { id: enrollmentId },
+            include: {
+                student: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true
+                    }
+                }
+            }
+        });
+        if (!enrollment) {
+            console.log('Enrollment no encontrado');
+            return;
+        }
+        if (!lesson.module.hasCertificate) {
+            console.log('Módulo no tiene certificados habilitados');
+            return;
+        }
+        const totalLessons = await prisma_1.prisma.lesson.count({
+            where: { moduleId: lesson.module.id }
+        });
+        const completedLessons = await prisma_1.prisma.lessonProgress.count({
+            where: {
+                enrollmentId: enrollmentId,
+                isCompleted: true,
+                lesson: {
+                    moduleId: lesson.module.id
+                }
+            }
+        });
+        console.log(`Módulo ${lesson.module.title}: ${completedLessons}/${totalLessons} lecciones completadas`);
+        if (completedLessons === totalLessons) {
+            console.log(`¡Módulo ${lesson.module.title} completado! Generando certificado...`);
+            const existingCertificate = await prisma_1.prisma.moduleCertificate.findUnique({
+                where: {
+                    moduleId_studentId: {
+                        moduleId: lesson.module.id,
+                        studentId: enrollment.student.userId
+                    }
+                }
+            });
+            if (existingCertificate) {
+                console.log('Certificado ya existe para este módulo y estudiante');
+                return;
+            }
+            const lessonProgresses = await prisma_1.prisma.lessonProgress.findMany({
+                where: {
+                    enrollmentId: enrollmentId,
+                    isCompleted: true,
+                    lesson: {
+                        moduleId: lesson.module.id
+                    }
+                },
+                include: {
+                    lesson: {
+                        select: {
+                            id: true,
+                            title: true
+                        }
+                    }
+                }
+            });
+            let totalGrade = 0;
+            let validLessons = 0;
+            for (const progress of lessonProgresses) {
+                let lessonGrade = 0;
+                if (progress.isCompleted) {
+                    lessonGrade += 70;
+                }
+                if (progress.timeSpent > 0) {
+                    const timeBonus = Math.min(20, (progress.timeSpent / 300) * 20);
+                    lessonGrade += timeBonus;
+                }
+                if (progress.videoProgress > 0) {
+                    lessonGrade += progress.videoProgress * 10;
+                }
+                totalGrade += Math.min(100, lessonGrade);
+                validLessons++;
+            }
+            const averageGrade = validLessons > 0 ? Math.round(totalGrade / validLessons) : 85;
+            const certificateUrl = `https://minio.example.com/certificates/module-cert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.pdf`;
+            const certificate = await prisma_1.prisma.moduleCertificate.create({
+                data: {
+                    moduleId: lesson.module.id,
+                    studentId: enrollment.student.userId,
+                    certificateUrl: certificateUrl,
+                    grade: averageGrade,
+                    completedAt: new Date()
+                },
+                include: {
+                    module: {
+                        select: {
+                            id: true,
+                            title: true,
+                            course: {
+                                select: {
+                                    id: true,
+                                    title: true
+                                }
+                            }
+                        }
+                    },
+                    student: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true
+                        }
+                    }
+                }
+            });
+            console.log(`✅ Certificado de módulo generado exitosamente para ${enrollment.student.firstName} ${enrollment.student.lastName}`);
+            console.log(`   📚 Módulo: ${certificate.module.title}`);
+            console.log(`   🎓 Curso: ${certificate.module.course.title}`);
+            console.log(`   📊 Calificación: ${certificate.grade}%`);
+            console.log(`   🔗 URL: ${certificate.certificateUrl}`);
+            await checkCourseCompletionAndGenerateCertificate(enrollmentId, lesson.module.course.id);
+        }
+    }
+    catch (error) {
+        console.error('Error verificando completación de módulo:', error);
+    }
+}
+async function checkCourseCompletionAndGenerateCertificate(enrollmentId, courseId) {
+    try {
+        const enrollment = await prisma_1.prisma.courseEnrollment.findUnique({
+            where: { id: enrollmentId },
+            include: {
+                student: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true
+                    }
+                },
+                course: {
+                    select: {
+                        id: true,
+                        title: true
+                    }
+                }
+            }
+        });
+        if (!enrollment) {
+            console.log('Enrollment no encontrado para verificación de curso');
+            return;
+        }
+        const totalLessons = await prisma_1.prisma.lesson.count({
+            where: {
+                module: {
+                    courseId: courseId
+                }
+            }
+        });
+        const completedLessons = await prisma_1.prisma.lessonProgress.count({
+            where: {
+                enrollmentId: enrollmentId,
+                isCompleted: true,
+                lesson: {
+                    module: {
+                        courseId: courseId
+                    }
+                }
+            }
+        });
+        console.log(`Curso ${enrollment.course.title}: ${completedLessons}/${totalLessons} lecciones completadas`);
+        if (completedLessons === totalLessons && totalLessons > 0) {
+            console.log(`¡Curso ${enrollment.course.title} completado! Generando certificado...`);
+            const existingCertificate = await prisma_1.prisma.certificate.findFirst({
+                where: {
+                    courseId: courseId,
+                    userId: enrollment.student.userId
+                }
+            });
+            if (existingCertificate) {
+                console.log('Certificado de curso ya existe para este estudiante');
+                return;
+            }
+            const verificationCode = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            const digitalSignature = `SIG-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            const certificateUrl = `https://minio.example.com/certificates/course-cert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.pdf`;
+            const certificate = await prisma_1.prisma.certificate.create({
+                data: {
+                    userId: enrollment.student.userId,
+                    courseId: courseId,
+                    template: 'default',
+                    verificationCode: verificationCode,
+                    digitalSignature: digitalSignature,
+                    url: certificateUrl,
+                    isValid: true
+                },
+                include: {
+                    course: {
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true
+                        }
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true
+                        }
+                    }
+                }
+            });
+            console.log(`✅ Certificado de curso generado exitosamente para ${enrollment.student.firstName} ${enrollment.student.lastName}`);
+            console.log(`   🎓 Curso: ${certificate.course.title}`);
+            console.log(`   🔐 Código de verificación: ${certificate.verificationCode}`);
+            console.log(`   🔗 URL: ${certificate.url}`);
+        }
+    }
+    catch (error) {
+        console.error('Error verificando completación de curso:', error);
     }
 }
 //# sourceMappingURL=LessonProgressController.js.map

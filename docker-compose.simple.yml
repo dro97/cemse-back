@@ -1,0 +1,81 @@
+services:
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - simple-network
+
+  # API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: always
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      # Application
+      NODE_ENV: development
+      PORT: 3001
+      JWT_SECRET: dev-jwt-secret-key
+      
+      # MinIO Configuration
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_USE_SSL: false
+      MINIO_BASE_URL: http://localhost:9000
+      
+      # Logging
+      LOG_LEVEL: debug
+      
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 1000
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - simple-network
+    command: >
+      sh -c "
+        echo '🚀 Starting API server...' &&
+        echo '📦 Initializing MinIO buckets...' &&
+        node scripts/init-minio.js &&
+        npm run dev
+      "
+
+volumes:
+  minio_data:
+    driver: local
+
+networks:
+  simple-network:
+    driver: bridge 

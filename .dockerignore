@@ -77,8 +77,8 @@ tests
 *.test.ts
 *.spec.ts
 
-# Development files
-tsconfig.json
+# Development files (but not tsconfig.json which is needed for build)
+# tsconfig.json - needed for build
 jest.config.js
 .eslintrc*
 .prettierrc*

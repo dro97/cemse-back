@@ -1,7 +1,8 @@
 import { Router } from "express";
 import {
   getMunicipalityProfile,
-  changeMunicipalityPassword
+  changeMunicipalityPassword,
+  updateMunicipalityProfile
 } from "../controllers/MunicipalityAuthController";
 import { authenticateToken, requireMunicipality } from "../middleware/auth";
 
@@ -12,5 +13,6 @@ router.use(authenticateToken);
 router.use(requireMunicipality);
 router.get("/me", getMunicipalityProfile);
 router.post("/change-password", changeMunicipalityPassword);
+router.put("/update-profile", updateMunicipalityProfile);
 
 export default router; 

@@ -343,3 +343,130 @@ export const uploadLessonResourceToMinIO = (req: any, res: any, next: any) => {
     next();
   });
 };
+
+// Middleware for general resources with MinIO upload
+export const uploadResourceToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB limit for general resources
+      files: 1
+    },
+    fileFilter: (_req, file, cb) => {
+      // Allow common document, media, and image types
+      const allowedTypes = [
+        // Documents
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/zip',
+        'application/x-zip-compressed',
+        'application/rar',
+        'application/x-rar-compressed',
+        // Videos
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'video/avi',
+        'video/mov',
+        'video/wmv',
+        'video/flv',
+        'video/mkv',
+        // Audio
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+        'audio/mp3',
+        'audio/aac',
+        'audio/flac',
+        // Images
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml',
+        'image/bmp',
+        'image/tiff',
+        // Text
+        'text/plain',
+        'text/csv',
+        'text/html',
+        'text/css',
+        'text/javascript',
+        'application/json',
+        'application/xml'
+      ];
+      
+      if (allowedTypes.includes(file?.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Tipo de archivo no permitido: ${file?.mimetype}`));
+      }
+    }
+  }).fields([
+    { name: 'file', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Process file upload to MinIO if file exists
+    if (req.files && req.files['file'] && req.files['file'][0]) {
+      try {
+        const file = req.files['file'][0];
+        console.log('📁 [DEBUG] Archivo de recurso recibido:', {
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+          size: file?.size,
+          bufferLength: file.buffer.length
+        });
+        
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file?.originalname);
+        const filename = `general-resource-${uniqueSuffix}${ext}`;
+        
+        console.log('📝 [DEBUG] Nombre del objeto generado:', filename);
+        
+        // Determine bucket based on file type
+        let bucket = 'resources';
+        if (file?.mimetype.startsWith('image/')) {
+          bucket = 'images';
+        } else if (file?.mimetype.startsWith('video/')) {
+          bucket = 'videos';
+        } else if (file?.mimetype.startsWith('audio/')) {
+          bucket = 'audio';
+        }
+        
+        // Upload to MinIO
+        console.log('☁️ [DEBUG] Subiendo archivo a MinIO bucket:', bucket);
+        const url = await uploadToMinio(bucket, filename, file?.buffer || Buffer.alloc(0), file?.mimetype);
+        console.log('✅ Archivo subido exitosamente:', url);
+        
+        // Store file info in request for controller to use
+        (req as any).uploadedResource = {
+          url: url,
+          filename: filename,
+          originalName: file?.originalname,
+          size: file?.size,
+          mimetype: file?.mimetype,
+          bucket: bucket
+        };
+        
+        console.log('✅ [DEBUG] Archivo subido a MinIO:', url);
+        console.log('📋 [DEBUG] (req as any).uploadedResource configurado:', (req as any).uploadedResource);
+        
+      } catch (error) {
+        console.error('❌ [ERROR] Error uploading to MinIO:', error);
+        return next(error);
+      }
+    }
+    
+    next();
+  });
+};

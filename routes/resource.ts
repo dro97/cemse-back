@@ -6,13 +6,18 @@ import {
   updateResource,
   deleteResource
 } from "../controllers/ResourceController";
+import { authenticateToken, requireOrganization, requireSuperAdmin } from "../middleware/auth";
+import { uploadResourceToMinIO } from "../middleware/minioUpload";
 
 const router = Router();
 
+// Public routes - anyone can view resources
 router.get("/", listResources);
 router.get("/:id", getResource);
-router.post("/", createResource);
-router.put("/:id", updateResource);
-router.delete("/:id", deleteResource);
+
+// Protected routes - require authentication and specific permissions
+router.post("/", authenticateToken, requireOrganization, uploadResourceToMinIO, createResource);
+router.put("/:id", authenticateToken, requireOrganization, uploadResourceToMinIO, updateResource);
+router.delete("/:id", authenticateToken, requireSuperAdmin, deleteResource);
 
 export default router; 

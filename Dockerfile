@@ -1,23 +1,20 @@
-# Multi-stage Dockerfile for full-express-api
-FROM node:18-alpine AS base
+# Use Node.js 18 Alpine as base image
+FROM node:18-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Set working directory
 WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache libc6-compat wget
 
 # Copy package files
 COPY package.json package-lock.json ./
-RUN npm ci --only=production && npm cache clean --force
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Install all dependencies for build
+# Install dependencies
 RUN npm ci
+
+# Copy source code
+COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -25,33 +22,24 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
-# Production image, copy all the files and run the app
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3001
-
-# Install production dependencies only
-RUN apk add --no-cache libc6-compat wget
+# Create necessary directories
+RUN mkdir -p logs uploads
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
-# Copy the built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
-
-# Create necessary directories
-RUN mkdir -p logs uploads
+# Change ownership of the app directory
 RUN chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
 
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Expose port
 EXPOSE 3001
 
 # Health check

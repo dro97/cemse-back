@@ -47,6 +47,8 @@ import { Request, Response } from "express";
  *   get:
  *     summary: Get all certificates
  *     tags: [Certificates]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of all certificates
@@ -57,9 +59,53 @@ import { Request, Response } from "express";
  *               items:
  *                 $ref: '#/components/schemas/Certificate'
  */
-export async function listCertificates(_req: Request, res: Response) {
-  const items = await prisma.certificate.findMany();
-  return res.json(items);
+export async function listCertificates(req: Request, res: Response): Promise<Response> {
+  try {
+    const user = (req as any).user;
+    
+    if (!user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    let whereClause: any = {};
+    
+    // If user is a regular student, only show their own certificates
+    if (user.type === 'user' && user.role !== 'SUPERADMIN') {
+      whereClause.userId = user.id;
+    }
+    
+    const certificates = await prisma.certificate.findMany({
+      where: whereClause,
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        issuedAt: 'desc'
+      }
+    });
+    
+    return res.json(certificates);
+  } catch (error: any) {
+    console.error("Error listing certificates:", error);
+    return res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 }
 
 /**
@@ -68,6 +114,8 @@ export async function listCertificates(_req: Request, res: Response) {
  *   get:
  *     summary: Get a certificate by ID
  *     tags: [Certificates]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -86,11 +134,52 @@ export async function listCertificates(_req: Request, res: Response) {
  *         description: Certificate not found
  */
 export async function getCertificate(req: Request, res: Response): Promise<Response> {
-  const item = await prisma.certificate.findUnique({
-    where: { id: req.params['id'] || "" }
-  });
-  if (!item) return res.status(404).json({ message: "Not found" });
-  return res.json(item);
+  try {
+    const user = (req as any).user;
+    const { id } = req.params;
+    
+    if (!user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    const certificate = await prisma.certificate.findUnique({
+      where: { id: id || '' },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    });
+    
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+    
+    // Check permissions - users can only see their own certificates, but admins can see all
+    if (user.type === 'user' && certificate.userId !== user.id && user.role !== 'SUPERADMIN') {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    return res.json(certificate);
+  } catch (error: any) {
+    console.error("Error getting certificate:", error);
+    return res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 }
 
 /**

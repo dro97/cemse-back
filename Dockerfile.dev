@@ -1,8 +1,10 @@
 # Development Dockerfile for full-express-api
 FROM node:18-alpine
 
-# Install development dependencies
-RUN apk add --no-cache libc6-compat wget curl
+# Install development dependencies with retry and update
+# Include openssl for Prisma compatibility
+RUN apk update && apk add --no-cache libc6-compat wget curl openssl openssl-dev || \
+    (sleep 2 && apk update && apk add --no-cache libc6-compat wget curl openssl openssl-dev)
 
 WORKDIR /app
 

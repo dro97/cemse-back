@@ -101,7 +101,8 @@ export async function companyLogin(req: Request, res: Response): Promise<Respons
         username: company.username, 
         name: company.name,
         businessSector: company.businessSector,
-        type: 'company'
+        type: 'company',
+        role: 'COMPANIES'
       }, 
       JWT_SECRET, 
       { expiresIn: "24h" }

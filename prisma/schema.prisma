@@ -300,6 +300,8 @@ model YouthApplicationCompanyInterest {
   @@map("youth_application_company_interests")
 }
 
+
+
 enum SenderType {
   COMPANY
   APPLICANT
@@ -1162,6 +1164,8 @@ enum CompanyInterestStatus {
   HIRED
   NOT_INTERESTED
 }
+
+
 
 // Sistema de Eventos
 model Event {

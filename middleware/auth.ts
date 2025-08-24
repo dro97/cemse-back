@@ -88,7 +88,12 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       }
       
       console.log("🔍 AUTH DEBUG: Municipality token validated successfully");
-      req.user = { id: municipality.id, username: municipality.username, type: 'municipality' };
+      req.user = { 
+        id: municipality.id, 
+        username: municipality.username, 
+        type: 'municipality',
+        role: payload.role || 'MUNICIPAL_GOVERNMENTS' // Include role from token or default to MUNICIPAL_GOVERNMENTS
+      };
       return next();
     }
     
@@ -108,7 +113,12 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       }
       
       console.log("🔍 AUTH DEBUG: Company token validated successfully");
-      req.user = { id: company.id, username: company.username, type: 'company' };
+      req.user = { 
+        id: company.id, 
+        username: company.username, 
+        type: 'company',
+        role: payload.role || 'COMPANIES' // Include role from token or default to COMPANIES
+      };
       return next();
     }
     

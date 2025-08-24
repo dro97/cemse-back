@@ -1,13 +1,13 @@
 import { Client } from 'minio';
 import { Readable } from 'stream';
 
-// Configuración de MinIO
+// Configuración de MinIO para Railway
 const minioClient = new Client({
-  endPoint: process.env['MINIO_ENDPOINT'] || '127.0.0.1',
-  port: parseInt(process.env['MINIO_PORT'] || '9000'),
-  useSSL: process.env['MINIO_USE_SSL'] === 'true',
-  accessKey: process.env['MINIO_ACCESS_KEY'] || 'minioadmin',
-  secretKey: process.env['MINIO_SECRET_KEY'] || 'minioadmin'
+  endPoint: process.env['MINIO_PUBLIC_HOST'] || process.env['MINIO_ENDPOINT'] || '127.0.0.1',
+  port: parseInt(process.env['MINIO_PUBLIC_PORT'] || process.env['MINIO_PORT'] || '9000'),
+  useSSL: process.env['MINIO_PUBLIC_PORT'] === '443' || process.env['MINIO_USE_SSL'] === 'true',
+  accessKey: process.env['MINIO_ROOT_USER'] || process.env['MINIO_ACCESS_KEY'] || 'minioadmin',
+  secretKey: process.env['MINIO_ROOT_PASSWORD'] || process.env['MINIO_SECRET_KEY'] || 'minioadmin'
 });
 
 // Nombres de buckets
@@ -105,8 +105,8 @@ export async function uploadToMinio(
       'Content-Type': contentType
     });
     
-    // Generar URL pública
-    const baseUrl = process.env['MINIO_BASE_URL'] || `http://${process.env['MINIO_ENDPOINT'] || '127.0.0.1'}:${process.env['MINIO_PORT'] || '9000'}`;
+    // Generar URL pública usando Railway
+    const baseUrl = process.env['MINIO_PUBLIC_ENDPOINT'] || process.env['MINIO_BASE_URL'] || `http://${process.env['MINIO_ENDPOINT'] || '127.0.0.1'}:${process.env['MINIO_PORT'] || '9000'}`;
     const publicUrl = `${baseUrl}/${bucketName}/${objectName}`;
     
     console.log(`✅ Archivo subido exitosamente: ${publicUrl}`);

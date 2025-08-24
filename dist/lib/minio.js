@@ -9,11 +9,11 @@ exports.fileExists = fileExists;
 const minio_1 = require("minio");
 const stream_1 = require("stream");
 const minioClient = new minio_1.Client({
-    endPoint: process.env['MINIO_ENDPOINT'] || '127.0.0.1',
-    port: parseInt(process.env['MINIO_PORT'] || '9000'),
-    useSSL: process.env['MINIO_USE_SSL'] === 'true',
-    accessKey: process.env['MINIO_ACCESS_KEY'] || 'minioadmin',
-    secretKey: process.env['MINIO_SECRET_KEY'] || 'minioadmin'
+    endPoint: 'bucket-production-1a58.up.railway.app',
+    port: 443,
+    useSSL: true,
+    accessKey: 'EhBs2erfGeHfTbz0NgdeM5qPYr1I0zUg',
+    secretKey: 'f09Z3szghyPcfAvF71xuk0C6xwxqKZPxYpZeRgIqoBtpeOjU'
 });
 exports.BUCKETS = {
     VIDEOS: 'videos',
@@ -88,7 +88,7 @@ async function uploadToMinio(bucketName, objectName, fileBuffer, contentType) {
         await minioClient.putObject(bucketName, objectName, stream, fileBuffer.length, {
             'Content-Type': contentType
         });
-        const baseUrl = process.env['MINIO_BASE_URL'] || `http://${process.env['MINIO_ENDPOINT'] || '127.0.0.1'}:${process.env['MINIO_PORT'] || '9000'}`;
+        const baseUrl = 'https://bucket-production-1a58.up.railway.app:443';
         const publicUrl = `${baseUrl}/${bucketName}/${objectName}`;
         console.log(`✅ Archivo subido exitosamente: ${publicUrl}`);
         return publicUrl;

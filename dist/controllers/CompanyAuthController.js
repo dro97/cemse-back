@@ -37,7 +37,8 @@ async function companyLogin(req, res) {
             username: company.username,
             name: company.name,
             businessSector: company.businessSector,
-            type: 'company'
+            type: 'company',
+            role: 'COMPANIES'
         }, JWT_SECRET, { expiresIn: "24h" });
         const { password: _, ...companyWithoutPassword } = company;
         return res.json({

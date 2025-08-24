@@ -72,7 +72,12 @@ async function authenticateToken(req, res, next) {
                 return res.status(401).json({ message: "Invalid or expired token." });
             }
             console.log("🔍 AUTH DEBUG: Municipality token validated successfully");
-            req.user = { id: municipality.id, username: municipality.username, type: 'municipality' };
+            req.user = {
+                id: municipality.id,
+                username: municipality.username,
+                type: 'municipality',
+                role: payload.role || 'MUNICIPAL_GOVERNMENTS'
+            };
             return next();
         }
         if (payload.type === 'company') {
@@ -88,7 +93,12 @@ async function authenticateToken(req, res, next) {
                 return res.status(401).json({ message: "Invalid or expired token." });
             }
             console.log("🔍 AUTH DEBUG: Company token validated successfully");
-            req.user = { id: company.id, username: company.username, type: 'company' };
+            req.user = {
+                id: company.id,
+                username: company.username,
+                type: 'company',
+                role: payload.role || 'COMPANIES'
+            };
             return next();
         }
         console.log("🔍 AUTH DEBUG: Token type not recognized:", payload.type);

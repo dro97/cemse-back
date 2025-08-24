@@ -38,7 +38,8 @@ async function municipalityLogin(req, res) {
             username: municipality.username,
             name: municipality.name,
             department: municipality.department,
-            type: 'municipality'
+            type: 'municipality',
+            role: 'MUNICIPAL_GOVERNMENTS'
         }, JWT_SECRET, { expiresIn: "24h" });
         const { password: _, ...municipalityWithoutPassword } = municipality;
         return res.json({

@@ -168,7 +168,15 @@ export async function getDashboardActivities(req: Request, res: Response): Promi
     ]);
 
     // Format activities
-    const allActivities = [];
+    const allActivities: Array<{
+      id: string;
+      type: string;
+      icon: string;
+      title: string;
+      description: string;
+      timestamp: string;
+      createdAt: Date;
+    }> = [];
 
     // Job applications
     jobApplications.forEach(app => {
@@ -206,8 +214,8 @@ export async function getDashboardActivities(req: Request, res: Response): Promi
           icon: '🎓',
           title: `¡Completaste un curso!`,
           description: enrollment.course.title,
-          timestamp: formatTimestamp(enrollment.completedAt || enrollment.enrolledAt),
-          createdAt: enrollment.completedAt || enrollment.enrolledAt
+          timestamp: formatTimestamp(enrollment.completedAt || enrollment.enrolledAt || new Date()),
+          createdAt: enrollment.completedAt || enrollment.enrolledAt || new Date()
         });
       });
 
@@ -245,8 +253,8 @@ export async function getDashboardActivities(req: Request, res: Response): Promi
         icon: '✅',
         title: `¡Completaste un quiz!`,
         description: attempt.quiz.title,
-        timestamp: formatTimestamp(attempt.completedAt || attempt.startedAt),
-        createdAt: attempt.completedAt || attempt.startedAt
+        timestamp: formatTimestamp(attempt.completedAt || attempt.startedAt || new Date()),
+        createdAt: attempt.completedAt || attempt.startedAt || new Date()
       });
     });
 
@@ -258,8 +266,8 @@ export async function getDashboardActivities(req: Request, res: Response): Promi
         icon: '📖',
         title: `¡Completaste una lección!`,
         description: progress.lesson.title,
-        timestamp: formatTimestamp(progress.completedAt || progress.lastWatchedAt),
-        createdAt: progress.completedAt || progress.lastWatchedAt
+        timestamp: formatTimestamp(progress.completedAt || progress.lastWatchedAt || new Date()),
+        createdAt: progress.completedAt || progress.lastWatchedAt || new Date()
       });
     });
 

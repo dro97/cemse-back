@@ -51,6 +51,7 @@ const jobApplicationMessages_1 = __importDefault(require("./jobApplicationMessag
 const youthapplication_1 = __importDefault(require("./youthapplication"));
 const youth_profile_1 = __importDefault(require("./youth-profile"));
 const events_1 = __importDefault(require("./events"));
+const userActivity_1 = __importDefault(require("./userActivity"));
 router.use("/profile", profile_1.default);
 router.use("/joboffer", joboffer_1.default);
 router.use("/jobquestion", jobquestion_1.default);
@@ -97,5 +98,6 @@ router.use("/jobapplication-messages", jobApplicationMessages_1.default);
 router.use("/youthapplication", youthapplication_1.default);
 router.use("/youth-profile", youth_profile_1.default);
 router.use("/events", events_1.default);
+router.use("/user-activities", userActivity_1.default);
 exports.default = router;
 //# sourceMappingURL=index.js.map

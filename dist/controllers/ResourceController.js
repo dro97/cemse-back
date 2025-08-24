@@ -60,12 +60,24 @@ async function createResource(req, res) {
             return res.status(401).json({ message: "Authentication required" });
         }
         const allowedRoles = ['SUPERADMIN', 'COMPANIES', 'MUNICIPAL_GOVERNMENTS', 'TRAINING_CENTERS', 'NGOS_AND_FOUNDATIONS'];
-        const allowedTypes = ['user', 'municipality', 'company'];
         const hasValidRole = user.role && allowedRoles.includes(user.role);
-        const hasValidType = user.type && allowedTypes.includes(user.type);
+        const hasValidType = user.type && (user.type === 'municipality' || user.type === 'company');
+        console.log('🔍 [DEBUG] User validation:', {
+            userRole: user.role,
+            userType: user.type,
+            hasValidRole,
+            hasValidType,
+            allowedRoles
+        });
         if (!hasValidRole && !hasValidType) {
             return res.status(403).json({
-                message: "Access denied. Only SuperAdmin and organizations can create resources"
+                message: "Access denied. Required roles: COMPANIES, MUNICIPAL_GOVERNMENTS, TRAINING_CENTERS, NGOS_AND_FOUNDATIONS, SUPERADMIN",
+                debug: {
+                    userRole: user.role,
+                    userType: user.type,
+                    hasValidRole,
+                    hasValidType
+                }
             });
         }
         console.log('🔍 [DEBUG] req.body:', req.body);

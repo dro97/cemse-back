@@ -359,9 +359,20 @@ async function createNewsArticle(req, res) {
         const videoUrl = req.body.videoUrl;
         const relatedLinks = req.body.relatedLinks;
         let finalImageUrl = imageUrl;
-        if (files['image'] && files['image'][0]) {
-            finalImageUrl = (0, upload_1.getFileUrl)(files['image'][0].filename);
+        console.log('=== IMAGE DEBUG ===');
+        console.log('req.uploadedImages:', req.uploadedImages);
+        console.log('req.files:', req.files);
+        console.log('imageUrl from body:', imageUrl);
+        console.log('finalImageUrl before processing:', finalImageUrl);
+        if (req.uploadedImages && req.uploadedImages.image) {
+            finalImageUrl = req.uploadedImages.image.url;
+            console.log('📸 Imagen subida a MinIO:', finalImageUrl);
         }
+        else {
+            console.log('❌ No se encontró imagen subida en req.uploadedImages');
+        }
+        console.log('finalImageUrl after processing:', finalImageUrl);
+        console.log('===================');
         if (!title?.trim() || !content?.trim() || !summary?.trim() || !category?.trim()) {
             return res.status(400).json({
                 message: "Title, content, summary, and category are required",
@@ -577,14 +588,9 @@ async function updateNewsArticle(req, res) {
         const videoUrl = req.body.videoUrl;
         const relatedLinks = req.body.relatedLinks;
         let finalImageUrl = imageUrl;
-        if (files['image'] && files['image'][0]) {
-            finalImageUrl = (0, upload_1.getFileUrl)(files['image'][0].filename);
-            if (article.imageUrl && article.imageUrl.startsWith('/uploads/')) {
-                const oldFilename = article.imageUrl.split('/').pop();
-                if (oldFilename) {
-                    (0, upload_1.deleteFile)(oldFilename);
-                }
-            }
+        if (req.uploadedImages && req.uploadedImages.image) {
+            finalImageUrl = req.uploadedImages.image.url;
+            console.log('📸 Imagen actualizada en MinIO:', finalImageUrl);
         }
         if (priority) {
             const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];

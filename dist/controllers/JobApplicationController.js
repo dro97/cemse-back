@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listJobApplications = listJobApplications;
 exports.getJobApplication = getJobApplication;
@@ -13,8 +10,7 @@ exports.deleteJobApplication = deleteJobApplication;
 exports.checkApplicationStatus = checkApplicationStatus;
 exports.updateApplicationStatus = updateApplicationStatus;
 const prisma_1 = require("../lib/prisma");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const minio_1 = require("../lib/minio");
 async function listJobApplications(req, res) {
     try {
         const user = req.user;
@@ -189,27 +185,15 @@ async function createJobApplication(req, res) {
         let finalCvUrl = null;
         let finalCoverLetterUrl = null;
         if (cvFile) {
-            const uploadDir = path_1.default.join(__dirname, '../uploads/cv');
-            if (!fs_1.default.existsSync(uploadDir)) {
-                fs_1.default.mkdirSync(uploadDir, { recursive: true });
-            }
-            const fileName = `cv_${user.id}_${Date.now()}${path_1.default.extname(cvFile.originalname)}`;
-            const filePath = path_1.default.join(uploadDir, fileName);
-            fs_1.default.writeFileSync(filePath, cvFile.buffer);
-            finalCvUrl = `/uploads/cv/${fileName}`;
+            const fileName = `cv_${user.id}_${Date.now()}.${cvFile.originalname.split('.').pop()}`;
+            finalCvUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, fileName, cvFile.buffer, cvFile.mimetype);
         }
         else if (cvUrl) {
             finalCvUrl = cvUrl;
         }
         if (coverLetterFile) {
-            const uploadDir = path_1.default.join(__dirname, '../uploads/cover-letters');
-            if (!fs_1.default.existsSync(uploadDir)) {
-                fs_1.default.mkdirSync(uploadDir, { recursive: true });
-            }
-            const fileName = `cover_${user.id}_${Date.now()}${path_1.default.extname(coverLetterFile.originalname)}`;
-            const filePath = path_1.default.join(uploadDir, fileName);
-            fs_1.default.writeFileSync(filePath, coverLetterFile.buffer);
-            finalCoverLetterUrl = `/uploads/cover-letters/${fileName}`;
+            const fileName = `cover_${user.id}_${Date.now()}.${coverLetterFile.originalname.split('.').pop()}`;
+            finalCoverLetterUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, fileName, coverLetterFile.buffer, coverLetterFile.mimetype);
         }
         else if (coverLetterUrl) {
             finalCoverLetterUrl = coverLetterUrl;

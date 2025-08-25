@@ -1,8 +1,28 @@
 import { Request, Response } from "express";
-export declare const uploadJobOfferImages: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
+interface MinIORequest extends Request {
+    uploadedJobImages?: {
+        images?: Array<{
+            url: string;
+            filename: string;
+            originalName: string;
+            size: number;
+            mimetype: string;
+            bucket: string;
+        }>;
+        logo?: {
+            url: string;
+            filename: string;
+            originalName: string;
+            size: number;
+            mimetype: string;
+            bucket: string;
+        };
+    };
+}
 export declare function listJobOffers(req: Request, res: Response): Promise<void>;
 export declare function getJobOffer(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
-export declare function createJobOffer(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
-export declare function updateJobOffer(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function createJobOffer(req: MinIORequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function updateJobOffer(req: MinIORequest, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function deleteJobOffer(req: Request, res: Response): Promise<void>;
+export {};
 //# sourceMappingURL=JobOfferController.d.ts.map

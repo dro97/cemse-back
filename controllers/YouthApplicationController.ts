@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import * as fs from "fs";
-import * as path from "path";
+import { uploadToMinio, BUCKETS } from '../lib/minio';
 
 // Tipos para TypeScript
 type YouthApplicationStatus = 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'HIRED';
@@ -379,27 +378,25 @@ export async function createYouthApplication(req: Request, res: Response): Promi
 
     // Priority: uploaded files > URLs from body
     if (cvFile) {
-      const uploadDir = path.join(__dirname, '../uploads/youth-applications/cv');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const fileName = `cv_${user.id}_${Date.now()}${path.extname(cvFile.originalname)}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, cvFile.buffer);
-      finalCvUrl = `/uploads/youth-applications/cv/${fileName}`;
+      const fileName = `cv_${user.id}_${Date.now()}.${cvFile.originalname.split('.').pop()}`;
+      finalCvUrl = await uploadToMinio(
+        BUCKETS.DOCUMENTS,
+        fileName,
+        cvFile.buffer,
+        cvFile.mimetype
+      );
     } else if (cvUrl) {
       finalCvUrl = cvUrl;
     }
 
     if (coverLetterFile) {
-      const uploadDir = path.join(__dirname, '../uploads/youth-applications/cover-letters');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const fileName = `cover_${user.id}_${Date.now()}${path.extname(coverLetterFile.originalname)}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, coverLetterFile.buffer);
-      finalCoverLetterUrl = `/uploads/youth-applications/cover-letters/${fileName}`;
+      const fileName = `cover_${user.id}_${Date.now()}.${coverLetterFile.originalname.split('.').pop()}`;
+      finalCoverLetterUrl = await uploadToMinio(
+        BUCKETS.DOCUMENTS,
+        fileName,
+        coverLetterFile.buffer,
+        coverLetterFile.mimetype
+      );
     } else if (coverLetterUrl) {
       finalCoverLetterUrl = coverLetterUrl;
     }

@@ -1,9 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
 import { ApplicationStatus } from "@prisma/client";
-// import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { uploadToMinio, BUCKETS } from '../lib/minio';
 
 export async function listJobApplications(req: Request, res: Response): Promise<Response> {
   try {
@@ -214,28 +212,26 @@ export async function createJobApplication(req: Request, res: Response): Promise
 
     // Priority: uploaded files > URLs from body
     if (cvFile) {
-      const uploadDir = path.join(__dirname, '../uploads/cv');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const fileName = `cv_${user.id}_${Date.now()}${path.extname(cvFile.originalname)}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, cvFile.buffer);
-      finalCvUrl = `/uploads/cv/${fileName}`;
+      const fileName = `cv_${user.id}_${Date.now()}.${cvFile.originalname.split('.').pop()}`;
+      finalCvUrl = await uploadToMinio(
+        BUCKETS.DOCUMENTS,
+        fileName,
+        cvFile.buffer,
+        cvFile.mimetype
+      );
     } else if (cvUrl) {
       // Use URL provided in body
       finalCvUrl = cvUrl;
     }
 
     if (coverLetterFile) {
-      const uploadDir = path.join(__dirname, '../uploads/cover-letters');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const fileName = `cover_${user.id}_${Date.now()}${path.extname(coverLetterFile.originalname)}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, coverLetterFile.buffer);
-      finalCoverLetterUrl = `/uploads/cover-letters/${fileName}`;
+      const fileName = `cover_${user.id}_${Date.now()}.${coverLetterFile.originalname.split('.').pop()}`;
+      finalCoverLetterUrl = await uploadToMinio(
+        BUCKETS.DOCUMENTS,
+        fileName,
+        coverLetterFile.buffer,
+        coverLetterFile.mimetype
+      );
     } else if (coverLetterUrl) {
       // Use URL provided in body
       finalCoverLetterUrl = coverLetterUrl;

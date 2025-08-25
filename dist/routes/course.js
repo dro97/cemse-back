@@ -32,12 +32,15 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const CourseController = __importStar(require("../controllers/CourseController"));
+const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const upload_1 = require("../middleware/upload");
-const router = (0, express_1.Router)();
+const minioUpload_1 = require("../middleware/minioUpload");
+const CourseController = __importStar(require("../controllers/CourseController"));
+const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 router.get("/", CourseController.listCourses);
 router.get("/:id", CourseController.getCourse);
@@ -60,9 +63,9 @@ const requireCourseCreation = (req, res, next) => {
         message: "Access denied. Only SuperAdmin, Organizations, and Municipalities can create courses"
     });
 };
-router.post("/", requireCourseCreation, upload_1.uploadCourseFiles, CourseController.createCourse);
+router.post("/", requireCourseCreation, minioUpload_1.uploadCourseFilesToMinIO, CourseController.createCourse);
 router.post("/json", requireCourseCreation, CourseController.createCourse);
-router.put("/:id", requireCourseCreation, upload_1.uploadCourseFiles, CourseController.updateCourse);
+router.put("/:id", requireCourseCreation, minioUpload_1.uploadCourseFilesToMinIO, CourseController.updateCourse);
 router.delete("/:id", auth_1.requireSuperAdmin, CourseController.deleteCourse);
 exports.default = router;
 //# sourceMappingURL=course.js.map

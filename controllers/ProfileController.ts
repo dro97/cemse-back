@@ -1,9 +1,23 @@
-import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
+import { prisma } from "../lib/prisma";
 import { io } from "../server";
-import { UserRole } from "@prisma/client";
+import { UserRole, UserStatus, EducationLevel, CompanySize } from "@prisma/client";
+import { uploadToMinio, BUCKETS } from "../lib/minio";
+import path from "path";
 
-
+// Extender el tipo Request para incluir uploadedImages
+interface RequestWithUploadedImages extends Request {
+  uploadedImages?: {
+    [key: string]: {
+      url: string;
+      filename: string;
+      originalName: string;
+      size: number;
+      mimetype: string;
+      bucket: string;
+    };
+  };
+}
 
 /**
  * @swagger
@@ -327,7 +341,7 @@ export async function createProfile(req: Request, res: Response): Promise<Respon
  *       404:
  *         description: Profile not found
  */
-export async function updateProfile(req: Request, res: Response): Promise<Response> {
+export async function updateProfile(req: RequestWithUploadedImages, res: Response): Promise<Response> {
   try {
     const profileId = req.params['id'] || "";
     const user = (req as any).user;
@@ -350,13 +364,12 @@ export async function updateProfile(req: Request, res: Response): Promise<Respon
       return res.status(403).json({ message: "Access denied. You can only update your own profile" });
     }
 
-    // Handle file upload for avatar
+    // Handle file upload for avatar using MinIO
     let updateData: any = { ...req.body };
     
-    if (req.file) {
-      // Process uploaded avatar
-      const avatarUrl = `/uploads/profiles/${req.file.filename}`;
-      updateData.avatarUrl = avatarUrl;
+    if (req.uploadedImages?.avatar) {
+      // Use MinIO URL for avatar
+      updateData.avatarUrl = req.uploadedImages.avatar.url;
     }
 
     const updated = await prisma.profile.update({
@@ -445,7 +458,7 @@ export async function deleteProfile(req: Request, res: Response): Promise<Respon
  *       404:
  *         description: Profile not found
  */
-export async function updateProfileAvatar(req: Request, res: Response): Promise<Response> {
+export async function updateProfileAvatar(req: RequestWithUploadedImages, res: Response): Promise<Response> {
   try {
     const profileId = req.params['id'] || "";
     const user = (req as any).user;
@@ -469,12 +482,12 @@ export async function updateProfileAvatar(req: Request, res: Response): Promise<
     }
 
     // Check if file was uploaded
-    if (!req.file) {
+    if (!req.uploadedImages?.avatar) {
       return res.status(400).json({ message: "No avatar file uploaded" });
     }
 
-    // Process uploaded avatar
-    const avatarUrl = `/uploads/profiles/${req.file.filename}`;
+    // Use MinIO URL for avatar
+    const avatarUrl = req.uploadedImages.avatar.url;
 
     const updated = await prisma.profile.update({
       where: { id: profileId },

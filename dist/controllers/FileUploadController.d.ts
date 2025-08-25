@@ -7,7 +7,6 @@ export declare function uploadProfileImageHandler(req: Request, res: Response): 
 export declare function uploadCVHandler(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function uploadCoverLetterHandler(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function uploadLessonVideoHandler(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
-export declare function serveImage(req: Request, res: Response): Promise<void | Response<any, Record<string, any>>>;
-export declare function serveDocument(req: Request, res: Response): Promise<void | Response<any, Record<string, any>>>;
-export declare function serveVideo(req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function uploadGenericFileHandler(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare const uploadGenericFile: import("express").RequestHandler<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>;
 //# sourceMappingURL=FileUploadController.d.ts.map

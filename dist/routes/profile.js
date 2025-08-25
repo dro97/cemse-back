@@ -32,19 +32,22 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const ProfileController = __importStar(require("../controllers/ProfileController"));
+const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const upload_1 = require("../middleware/upload");
-const router = (0, express_1.Router)();
+const minioUpload_1 = require("../middleware/minioUpload");
+const ProfileController = __importStar(require("../controllers/ProfileController"));
+const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
-router.get("/", auth_1.requireSuperAdmin, ProfileController.listProfiles);
+router.get("/", ProfileController.listProfiles);
 router.get("/me", ProfileController.getMyProfile);
 router.get("/:id", ProfileController.getProfile);
-router.post("/", auth_1.requireSuperAdmin, ProfileController.createProfile);
-router.put("/:id", upload_1.uploadProfileAvatar, ProfileController.updateProfile);
-router.put("/:id/avatar", upload_1.uploadProfileAvatar, ProfileController.updateProfileAvatar);
-router.delete("/:id", auth_1.requireSuperAdmin, ProfileController.deleteProfile);
+router.post("/", ProfileController.createProfile);
+router.put("/:id", minioUpload_1.uploadImageToMinIO, ProfileController.updateProfile);
+router.put("/:id/avatar", minioUpload_1.uploadImageToMinIO, ProfileController.updateProfileAvatar);
+router.delete("/:id", ProfileController.deleteProfile);
 exports.default = router;
 //# sourceMappingURL=profile.js.map

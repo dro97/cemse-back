@@ -618,9 +618,12 @@ export async function createEvent(req: Request, res: Response): Promise<Response
 
     // Procesar imagen si se subió
     let imageUrl = req.body.imageUrl;
-    if (req.files && (req.files as any).image && (req.files as any).image[0]) {
+    if ((req as any).uploadedImages && (req as any).uploadedImages.image) {
+      // Usar la URL de MinIO si se subió una imagen
+      imageUrl = (req as any).uploadedImages.image.url;
+    } else if (req.files && (req.files as any).image && (req.files as any).image[0]) {
+      // Fallback para archivos locales si no hay MinIO
       const uploadedFile = (req.files as any).image[0];
-      // Generar URL para la imagen subida
       imageUrl = `/uploads/${uploadedFile.filename}`;
     }
 
@@ -643,6 +646,8 @@ export async function createEvent(req: Request, res: Response): Promise<Response
       speakers = [],
       featured
     } = req.body;
+
+    // El middleware ya convierte featured de string a boolean
 
     // Validaciones
     if (!title || !organizer || !description || !date || !time || !type || !category || !location) {
@@ -794,9 +799,12 @@ export async function updateEvent(req: Request, res: Response): Promise<Response
 
     // Procesar imagen si se subió
     let imageUrl = req.body.imageUrl;
-    if (req.files && (req.files as any).image && (req.files as any).image[0]) {
+    if ((req as any).uploadedImages && (req as any).uploadedImages.image) {
+      // Usar la URL de MinIO si se subió una imagen
+      imageUrl = (req as any).uploadedImages.image.url;
+    } else if (req.files && (req.files as any).image && (req.files as any).image[0]) {
+      // Fallback para archivos locales si no hay MinIO
       const uploadedFile = (req.files as any).image[0];
-      // Generar URL para la imagen subida
       imageUrl = `/uploads/${uploadedFile.filename}`;
     }
 
@@ -837,7 +845,10 @@ export async function updateEvent(req: Request, res: Response): Promise<Response
     if (requirements !== undefined) updateData.requirements = requirements;
     if (agenda !== undefined) updateData.agenda = agenda;
     if (speakers !== undefined) updateData.speakers = speakers;
-    if (featured !== undefined) updateData.featured = featured;
+    if (featured !== undefined) {
+      // El middleware ya convierte featured de string a boolean
+      updateData.featured = featured;
+    }
 
     if (registrationDeadline !== undefined) {
       updateData.registrationDeadline = registrationDeadline ? new Date(registrationDeadline) : null;

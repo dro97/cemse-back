@@ -32,11 +32,15 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const JobOfferController = __importStar(require("../controllers/JobOfferController"));
+const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const router = (0, express_1.Router)();
+const minioUpload_1 = require("../middleware/minioUpload");
+const JobOfferController = __importStar(require("../controllers/JobOfferController"));
+const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 router.get("/", JobOfferController.listJobOffers);
 router.get("/:id", JobOfferController.getJobOffer);
@@ -58,8 +62,8 @@ const requireJobOfferCreation = (req, res, next) => {
         message: "Access denied. Only SuperAdmin, Organizations, and Companies can create job offers"
     });
 };
-router.post("/", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.createJobOffer);
-router.put("/:id", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.updateJobOffer);
+router.post("/", requireJobOfferCreation, minioUpload_1.uploadMultipleImagesToMinIO, JobOfferController.createJobOffer);
+router.put("/:id", requireJobOfferCreation, minioUpload_1.uploadMultipleImagesToMinIO, JobOfferController.updateJobOffer);
 router.delete("/:id", auth_1.requireSuperAdmin, JobOfferController.deleteJobOffer);
 exports.default = router;
 //# sourceMappingURL=joboffer.js.map

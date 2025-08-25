@@ -1,13 +1,15 @@
 import { Client } from 'minio';
 import { Readable } from 'stream';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Configuración de MinIO para Railway
 const minioClient = new Client({
-  endPoint: process.env['MINIO_ENDPOINT'] || 'bucket-production-1a58.up.railway.app',
-  port: parseInt(process.env['MINIO_PORT'] || '443'),
-  useSSL: true, // Railway usa HTTPS
-  accessKey: process.env['MINIO_ACCESS_KEY'] || 'EhBs2erfGeHfTbz0NgdeM5qPYrlI0zUg',
-  secretKey: process.env['MINIO_SECRET_KEY'] || 'f09Z3szghyPcfAvF71xuk0C6xwxqKZPxYpZeRgIqoBtpeOjU'
+  endPoint: 'bucket-production-1a58.up.railway.app',
+  port: 443,
+  useSSL: true,
+  accessKey: 'EhBs2erfGeHfTbz0NgdeM5qPYrlI0zUg',
+  secretKey: 'f09Z3szghyPcfAvF71xuk0C6xwxqKZPxYpZeRgIqoBtpeOjU'
 });
 
 // Nombres de buckets
@@ -21,43 +23,33 @@ export const BUCKETS = {
   AUDIO: 'audio'
 } as const;
 
-// URL base para acceder a los archivos
-const BASE_URL = 'https://bucket-production-1a58.up.railway.app:443';
+// URL base para acceder a los archivos (local)
+const BASE_URL = 'http://localhost:3001/uploads';
 
-// Inicializar buckets si no existen
+// Asegurar que existe el directorio de uploads
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Inicializar buckets si no existen (versión local)
 export async function initializeBuckets() {
   try {
-    const buckets = Object.values(BUCKETS);
+    console.log('🔍 Inicializando almacenamiento local...');
     
+    // Crear directorios locales
+    const buckets = Object.values(BUCKETS);
     for (const bucketName of buckets) {
-      const exists = await minioClient.bucketExists(bucketName);
-      if (!exists) {
-        await minioClient.makeBucket(bucketName, 'us-east-1');
-        console.log(`✅ Bucket '${bucketName}' creado exitosamente`);
-      }
-      
-      // Configurar política pública para TODOS los buckets
-      try {
-        const policy = {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Effect: 'Allow',
-              Principal: { AWS: ['*'] },
-              Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${bucketName}/*`]
-            }
-          ]
-        };
-        
-        await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
-        console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
-      } catch (policyError) {
-        console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, (policyError as any).message);
+      const bucketDir = path.join(uploadsDir, bucketName);
+      if (!fs.existsSync(bucketDir)) {
+        fs.mkdirSync(bucketDir, { recursive: true });
+        console.log(`✅ Directorio '${bucketName}' creado exitosamente`);
       }
     }
+    
+    console.log('✅ Almacenamiento local inicializado');
   } catch (error) {
-    console.error('❌ Error inicializando buckets de MinIO:', error);
+    console.error('❌ Error inicializando almacenamiento:', error);
   }
 }
 
@@ -69,55 +61,25 @@ export async function uploadToMinio(
   contentType: string
 ): Promise<string> {
   try {
-    // Verificar que el bucket existe
+    // Verificar si el bucket existe, si no, crearlo
     const bucketExists = await minioClient.bucketExists(bucketName);
     if (!bucketExists) {
-      console.log(`📦 Creando bucket '${bucketName}'...`);
-      await minioClient.makeBucket(bucketName, 'us-east-1');
-      
-      // Configurar política pública para TODOS los buckets
-      const policy = {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Effect: 'Allow',
-            Principal: { AWS: ['*'] },
-            Action: ['s3:GetObject'],
-            Resource: [`arn:aws:s3:::${bucketName}/*`]
-          }
-        ]
-      };
-      
-      await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
-      console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
+      await minioClient.makeBucket(bucketName);
+      console.log(`✅ Bucket '${bucketName}' creado exitosamente`);
     }
     
-    // Verificar que el buffer es válido
-    if (!fileBuffer || fileBuffer.length === 0) {
-      throw new Error('Buffer de archivo vacío o inválido');
-    }
-    
-    console.log(`📤 Subiendo archivo: ${objectName} (${fileBuffer.length} bytes) a bucket: ${bucketName}`);
-    
-    const stream = Readable.from(fileBuffer);
-    
-    await minioClient.putObject(bucketName, objectName, stream, fileBuffer.length, {
+    // Subir archivo a MinIO
+    await minioClient.putObject(bucketName, objectName, fileBuffer, fileBuffer.length, {
       'Content-Type': contentType
     });
     
-    // Generar URL pública usando la URL de Railway
-    const publicUrl = `${BASE_URL}/${bucketName}/${objectName}`;
+    // Generar URL pública
+    const publicUrl = `https://${process.env['MINIO_PUBLIC_HOST'] || 'bucket-production-1a58.up.railway.app'}/${bucketName}/${objectName}`;
     
-    console.log(`✅ Archivo subido exitosamente: ${publicUrl}`);
+    console.log(`✅ Archivo subido a MinIO: ${publicUrl}`);
     return publicUrl;
   } catch (error) {
     console.error('❌ Error subiendo archivo a MinIO:', error);
-    console.error('📋 Detalles del error:', {
-      bucketName,
-      objectName,
-      bufferLength: fileBuffer?.length,
-      contentType
-    });
     throw error;
   }
 }
@@ -126,25 +88,19 @@ export async function uploadToMinio(
 export async function deleteFromMinio(bucketName: string, objectName: string): Promise<void> {
   try {
     await minioClient.removeObject(bucketName, objectName);
-    console.log(`✅ Archivo eliminado exitosamente: ${bucketName}/${objectName}`);
+    console.log(`✅ Archivo eliminado de MinIO: ${bucketName}/${objectName}`);
   } catch (error) {
     console.error('❌ Error eliminando archivo de MinIO:', error);
     throw error;
   }
 }
 
-// Función para obtener URL firmada (para archivos privados)
+// Función para obtener URL pública de MinIO
 export async function getSignedUrl(bucketName: string, objectName: string, expirySeconds: number = 3600): Promise<string> {
-  try {
-    const url = await minioClient.presignedGetObject(bucketName, objectName, expirySeconds);
-    return url;
-  } catch (error) {
-    console.error('❌ Error generando URL firmada:', error);
-    throw error;
-  }
+  return `https://bucket-production-1a58.up.railway.app/${bucketName}/${objectName}`;
 }
 
-// Función para verificar si un archivo existe
+// Función para verificar si un archivo existe en MinIO
 export async function fileExists(bucketName: string, objectName: string): Promise<boolean> {
   try {
     await minioClient.statObject(bucketName, objectName);

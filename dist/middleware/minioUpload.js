@@ -3,27 +3,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadImageToMinIO = exports.uploadResourceToMinIO = exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = void 0;
+exports.uploadResourceToMinIO = exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = exports.uploadCourseFilesToMinIO = exports.uploadDocumentsToMinIO = exports.uploadMultipleImagesToMinIO = exports.uploadImageToMinIO = void 0;
 const multer_1 = __importDefault(require("multer"));
 const minio_1 = require("../lib/minio");
 const path_1 = __importDefault(require("path"));
-
-// Configurar multer para almacenamiento en memoria (para luego subir a MinIO)
 const storage = multer_1.default.memoryStorage();
-
-// Middleware para subir imágenes (eventos, noticias, perfiles, etc.)
 const uploadImageToMinIO = (req, res, next) => {
-    multer_1.default({
+    console.log('🔍 MINIO UPLOAD MIDDLEWARE - Iniciando...');
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    (0, multer_1.default)({
         storage: storage,
         limits: {
-            fileSize: 5 * 1024 * 1024, // 5MB máximo para imágenes
+            fileSize: 5 * 1024 * 1024,
             files: 1
         },
         fileFilter: (_req, file, cb) => {
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (allowedTypes.includes(file?.mimetype)) {
                 cb(null, true);
-            } else {
+            }
+            else {
                 cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
             }
         }
@@ -36,30 +37,21 @@ const uploadImageToMinIO = (req, res, next) => {
         if (err) {
             return next(err);
         }
-
-        // Procesar archivos subidos
+        console.log('🔍 MINIO UPLOAD - Archivos recibidos:', req.files);
+        console.log('🔍 MINIO UPLOAD - Tipo de req.files:', typeof req.files);
+        console.log('🔍 MINIO UPLOAD - Keys de req.files:', req.files ? Object.keys(req.files) : 'No files');
         if (req.files) {
             const uploadedFiles = {};
-
             for (const [fieldName, files] of Object.entries(req.files)) {
                 const fileArray = files;
                 if (fileArray.length > 0) {
                     const file = fileArray[0];
-                    
-                    // Generar nombre único
                     const timestamp = Date.now();
                     const randomSuffix = Math.round(Math.random() * 1E9);
                     const fileExtension = path_1.default.extname(file?.originalname);
                     const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
-
                     try {
-                        const imageUrl = await (0, minio_1.uploadToMinio)(
-                            minio_1.BUCKETS.IMAGES,
-                            objectName,
-                            file?.buffer || Buffer.alloc(0),
-                            file?.mimetype || 'image/jpeg'
-                        );
-
+                        const imageUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.IMAGES, objectName, file?.buffer || Buffer.alloc(0), file?.mimetype || 'image/jpeg');
                         uploadedFiles[fieldName] = {
                             url: imageUrl,
                             filename: objectName,
@@ -68,7 +60,8 @@ const uploadImageToMinIO = (req, res, next) => {
                             mimetype: file?.mimetype,
                             bucket: minio_1.BUCKETS.IMAGES
                         };
-                    } catch (error) {
+                    }
+                    catch (error) {
                         console.error(`Error subiendo imagen ${fieldName}:`, error);
                         return res.status(500).json({
                             message: `Error subiendo imagen ${fieldName}`,
@@ -77,15 +70,237 @@ const uploadImageToMinIO = (req, res, next) => {
                     }
                 }
             }
-
             req.uploadedImages = uploadedFiles;
+            console.log('🔍 MINIO UPLOAD - uploadedFiles final:', uploadedFiles);
         }
-
+        else {
+            console.log('🔍 MINIO UPLOAD - No se encontraron archivos para procesar');
+        }
+        console.log('🔍 MINIO UPLOAD - Finalizando middleware');
         next();
     });
 };
-
 exports.uploadImageToMinIO = uploadImageToMinIO;
+const uploadMultipleImagesToMinIO = (req, res, next) => {
+    (0, multer_1.default)({
+        storage: storage,
+        limits: {
+            fileSize: 5 * 1024 * 1024,
+            files: 10
+        },
+        fileFilter: (_req, file, cb) => {
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (allowedTypes.includes(file?.mimetype)) {
+                cb(null, true);
+            }
+            else {
+                cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
+            }
+        }
+    }).fields([
+        { name: 'images', maxCount: 10 },
+        { name: 'logo', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.files) {
+            const uploadedFiles = {};
+            for (const [fieldName, files] of Object.entries(req.files)) {
+                const fileArray = files;
+                if (fieldName === 'images') {
+                    uploadedFiles.images = [];
+                    for (const file of fileArray) {
+                        const timestamp = Date.now();
+                        const randomSuffix = Math.round(Math.random() * 1E9);
+                        const fileExtension = path_1.default.extname(file?.originalname);
+                        const objectName = `job-image-${timestamp}-${randomSuffix}${fileExtension}`;
+                        try {
+                            const imageUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.IMAGES, objectName, file?.buffer || Buffer.alloc(0), file?.mimetype || 'image/jpeg');
+                            uploadedFiles.images.push({
+                                url: imageUrl,
+                                filename: objectName,
+                                originalName: file?.originalname,
+                                size: file?.size,
+                                mimetype: file?.mimetype,
+                                bucket: minio_1.BUCKETS.IMAGES
+                            });
+                        }
+                        catch (error) {
+                            console.error('Error subiendo imagen de trabajo:', error);
+                            return res.status(500).json({
+                                message: 'Error subiendo imagen de trabajo',
+                                error: error.message
+                            });
+                        }
+                    }
+                }
+                else if (fieldName === 'logo') {
+                    const file = fileArray[0];
+                    const timestamp = Date.now();
+                    const randomSuffix = Math.round(Math.random() * 1E9);
+                    const fileExtension = path_1.default.extname(file?.originalname);
+                    const objectName = `job-logo-${timestamp}-${randomSuffix}${fileExtension}`;
+                    try {
+                        const logoUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.IMAGES, objectName, file?.buffer || Buffer.alloc(0), file?.mimetype || 'image/jpeg');
+                        uploadedFiles.logo = {
+                            url: logoUrl,
+                            filename: objectName,
+                            originalName: file?.originalname,
+                            size: file?.size,
+                            mimetype: file?.mimetype,
+                            bucket: minio_1.BUCKETS.IMAGES
+                        };
+                    }
+                    catch (error) {
+                        console.error('Error subiendo logo:', error);
+                        return res.status(500).json({
+                            message: 'Error subiendo logo',
+                            error: error.message
+                        });
+                    }
+                }
+            }
+            req.uploadedJobImages = uploadedFiles;
+        }
+        next();
+    });
+};
+exports.uploadMultipleImagesToMinIO = uploadMultipleImagesToMinIO;
+const uploadDocumentsToMinIO = (req, res, next) => {
+    (0, multer_1.default)({
+        storage: storage,
+        limits: {
+            fileSize: 10 * 1024 * 1024,
+            files: 1
+        },
+        fileFilter: (_req, file, cb) => {
+            const allowedTypes = ['application/pdf'];
+            if (allowedTypes.includes(file?.mimetype)) {
+                cb(null, true);
+            }
+            else {
+                cb(new Error('Solo se permiten archivos PDF'));
+            }
+        }
+    }).fields([
+        { name: 'document', maxCount: 1 },
+        { name: 'cv', maxCount: 1 },
+        { name: 'coverLetter', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.files) {
+            const uploadedFiles = {};
+            for (const [fieldName, files] of Object.entries(req.files)) {
+                const fileArray = files;
+                if (fileArray.length > 0) {
+                    const file = fileArray[0];
+                    const timestamp = Date.now();
+                    const randomSuffix = Math.round(Math.random() * 1E9);
+                    const fileExtension = path_1.default.extname(file?.originalname);
+                    const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+                    try {
+                        const documentUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, objectName, file?.buffer || Buffer.alloc(0), file?.mimetype || 'application/pdf');
+                        uploadedFiles[fieldName] = {
+                            url: documentUrl,
+                            filename: objectName,
+                            originalName: file?.originalname,
+                            size: file?.size,
+                            mimetype: file?.mimetype,
+                            bucket: minio_1.BUCKETS.DOCUMENTS
+                        };
+                    }
+                    catch (error) {
+                        console.error(`Error subiendo documento ${fieldName}:`, error);
+                        return res.status(500).json({
+                            message: `Error subiendo documento ${fieldName}`,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+            req.uploadedDocuments = uploadedFiles;
+        }
+        next();
+    });
+};
+exports.uploadDocumentsToMinIO = uploadDocumentsToMinIO;
+const uploadCourseFilesToMinIO = (req, res, next) => {
+    (0, multer_1.default)({
+        storage: storage,
+        limits: {
+            fileSize: 100 * 1024 * 1024,
+            files: 2
+        },
+        fileFilter: (_req, file, cb) => {
+            if (file.fieldname === 'thumbnail') {
+                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (allowedImageTypes.includes(file?.mimetype)) {
+                    cb(null, true);
+                }
+                else {
+                    cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP) para thumbnail'));
+                }
+            }
+            else if (file.fieldname === 'videoPreview') {
+                const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'];
+                if (allowedVideoTypes.includes(file?.mimetype)) {
+                    cb(null, true);
+                }
+                else {
+                    cb(new Error('Solo se permiten archivos de video (MP4, WebM, OGG, AVI, MOV) para video preview'));
+                }
+            }
+            else {
+                cb(new Error('Nombre de campo inválido. Use "thumbnail" para imágenes o "videoPreview" para videos'));
+            }
+        }
+    }).fields([
+        { name: 'thumbnail', maxCount: 1 },
+        { name: 'videoPreview', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            return next(err);
+        }
+        if (req.files) {
+            const uploadedFiles = {};
+            for (const [fieldName, files] of Object.entries(req.files)) {
+                const fileArray = files;
+                if (fileArray.length > 0) {
+                    const file = fileArray[0];
+                    const timestamp = Date.now();
+                    const randomSuffix = Math.round(Math.random() * 1E9);
+                    const fileExtension = path_1.default.extname(file?.originalname);
+                    const objectName = `course-${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+                    const bucket = fieldName === 'thumbnail' ? minio_1.BUCKETS.IMAGES : minio_1.BUCKETS.VIDEOS;
+                    try {
+                        const fileUrl = await (0, minio_1.uploadToMinio)(bucket, objectName, file?.buffer || Buffer.alloc(0), file?.mimetype || 'application/octet-stream');
+                        uploadedFiles[fieldName] = {
+                            url: fileUrl,
+                            filename: objectName,
+                            originalName: file?.originalname,
+                            size: file?.size,
+                            mimetype: file?.mimetype,
+                            bucket: bucket
+                        };
+                    }
+                    catch (error) {
+                        console.error(`Error subiendo archivo de curso ${fieldName}:`, error);
+                        return res.status(500).json({
+                            message: `Error subiendo archivo de curso ${fieldName}`,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+            req.uploadedCourseFiles = uploadedFiles;
+        }
+        next();
+    });
+};
+exports.uploadCourseFilesToMinIO = uploadCourseFilesToMinIO;
 exports.uploadLessonVideo = (0, multer_1.default)({
     storage: storage,
     limits: {

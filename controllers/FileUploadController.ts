@@ -1,70 +1,12 @@
 import { Request, Response } from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { uploadToMinio, BUCKETS } from '../lib/minio';
 
-// Configurar multer para subida de imágenes
-const imageStorage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
-    const uploadDir = path.join(__dirname, '../uploads/images');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// Configurar multer para subida de videos
-const videoStorage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
-    const uploadDir = path.join(__dirname, '../uploads/videos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// Configurar multer para subida de documentos (PDFs)
-const documentStorage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
-    const uploadDir = path.join(__dirname, '../uploads/documents');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// Configurar multer para subida de cartas de presentación (PDFs)
-const coverLetterStorage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
-    const uploadDir = path.join(__dirname, '../uploads/cover-letters');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configurar multer para memoria (no almacenamiento local)
+const memoryStorage = multer.memoryStorage();
 
 const imageUpload = multer({
-  storage: imageStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 2 * 1024 * 1024, // 2MB máximo para imágenes
   },
@@ -80,7 +22,7 @@ const imageUpload = multer({
 });
 
 const videoUpload = multer({
-  storage: videoStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB máximo para videos
   },
@@ -104,7 +46,7 @@ const videoUpload = multer({
 });
 
 const documentUpload = multer({
-  storage: documentStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB máximo para documentos
   },
@@ -120,7 +62,7 @@ const documentUpload = multer({
 });
 
 const coverLetterUpload = multer({
-  storage: coverLetterStorage,
+  storage: memoryStorage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB máximo para cartas de presentación
   },
@@ -147,6 +89,14 @@ export const uploadCV = documentUpload.single('cvFile');
 // Middleware para subir carta de presentación en PDF
 export const uploadCoverLetter = coverLetterUpload.single('coverLetterFile');
 
+// Función helper para generar nombres únicos de archivo
+function generateUniqueFilename(originalname: string, prefix: string = ''): string {
+  const timestamp = Date.now();
+  const random = Math.round(Math.random() * 1E9);
+  const extension = originalname.split('.').pop();
+  return `${prefix}${timestamp}-${random}.${extension}`;
+}
+
 // Endpoint para subir imagen de perfil
 export async function uploadProfileImageHandler(req: Request, res: Response) {
   try {
@@ -160,13 +110,24 @@ export async function uploadProfileImageHandler(req: Request, res: Response) {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    // Generar URL relativa para la imagen
-    const imageUrl = `/uploads/images/${req.file.filename}`;
+    // Generar nombre único para el archivo
+    const filename = generateUniqueFilename(req.file.originalname, 'profile-');
+    
+    // Subir a MinIO
+    const imageUrl = await uploadToMinio(
+      BUCKETS.IMAGES,
+      filename,
+      req.file.buffer,
+      req.file.mimetype
+    );
 
     return res.json({
       message: "Image uploaded successfully",
       imageUrl: imageUrl,
-      filename: req.file.filename
+      filename: filename,
+      originalName: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
     });
 
   } catch (error: any) {
@@ -191,13 +152,21 @@ export async function uploadCVHandler(req: Request, res: Response) {
       return res.status(400).json({ message: "No CV file provided" });
     }
 
-    // Generar URL relativa para el CV
-    const cvUrl = `/uploads/documents/${req.file.filename}`;
+    // Generar nombre único para el archivo
+    const filename = generateUniqueFilename(req.file.originalname, 'cv-');
+    
+    // Subir a MinIO
+    const cvUrl = await uploadToMinio(
+      BUCKETS.DOCUMENTS,
+      filename,
+      req.file.buffer,
+      req.file.mimetype
+    );
 
     return res.json({
       message: "CV uploaded successfully",
       cvUrl: cvUrl,
-      filename: req.file.filename,
+      filename: filename,
       originalName: req.file.originalname,
       size: req.file.size,
       mimetype: req.file.mimetype
@@ -225,13 +194,21 @@ export async function uploadCoverLetterHandler(req: Request, res: Response) {
       return res.status(400).json({ message: "No cover letter file provided" });
     }
 
-    // Generar URL relativa para la carta de presentación
-    const coverLetterUrl = `/uploads/cover-letters/${req.file.filename}`;
+    // Generar nombre único para el archivo
+    const filename = generateUniqueFilename(req.file.originalname, 'cover-');
+    
+    // Subir a MinIO
+    const coverLetterUrl = await uploadToMinio(
+      BUCKETS.DOCUMENTS,
+      filename,
+      req.file.buffer,
+      req.file.mimetype
+    );
 
     return res.json({
       message: "Cover letter uploaded successfully",
       coverLetterUrl: coverLetterUrl,
-      filename: req.file.filename,
+      filename: filename,
       originalName: req.file.originalname,
       size: req.file.size,
       mimetype: req.file.mimetype
@@ -259,13 +236,21 @@ export async function uploadLessonVideoHandler(req: Request, res: Response) {
       return res.status(400).json({ message: "No video file provided" });
     }
 
-    // Generar URL relativa para el video
-    const videoUrl = `/uploads/videos/${req.file.filename}`;
+    // Generar nombre único para el archivo
+    const filename = generateUniqueFilename(req.file.originalname, 'video-');
+    
+    // Subir a MinIO
+    const videoUrl = await uploadToMinio(
+      BUCKETS.VIDEOS,
+      filename,
+      req.file.buffer,
+      req.file.mimetype
+    );
 
     return res.json({
       message: "Video uploaded successfully",
       videoUrl: videoUrl,
-      filename: req.file.filename,
+      filename: filename,
       originalName: req.file.originalname,
       size: req.file.size,
       mimetype: req.file.mimetype
@@ -280,24 +265,52 @@ export async function uploadLessonVideoHandler(req: Request, res: Response) {
   }
 }
 
-// Endpoint para servir imágenes
-export async function serveImage(req: Request, res: Response) {
+// Endpoint para subir archivo genérico
+export async function uploadGenericFileHandler(req: Request, res: Response) {
   try {
-    const { filename } = req.params;
+    const user = (req as any).user;
     
-    if (!filename) {
-      return res.status(400).json({ message: "Filename is required" });
+    if (!user) {
+      return res.status(401).json({ message: "Authentication required" });
     }
-    
-    const imagePath = path.join(__dirname, '../uploads/images', filename);
-    
-    if (!fs.existsSync(imagePath)) {
-      return res.status(404).json({ message: "Image not found" });
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
     }
+
+    // Determinar el bucket según el tipo de archivo
+    let bucket: string = BUCKETS.RESOURCES;
+    if (req.file.mimetype.startsWith('image/')) {
+      bucket = BUCKETS.IMAGES;
+    } else if (req.file.mimetype.startsWith('video/')) {
+      bucket = BUCKETS.VIDEOS;
+    } else if (req.file.mimetype === 'application/pdf') {
+      bucket = BUCKETS.DOCUMENTS;
+    }
+
+    // Generar nombre único para el archivo
+    const filename = generateUniqueFilename(req.file.originalname);
     
-    return res.sendFile(imagePath);
+    // Subir a MinIO
+    const fileUrl = await uploadToMinio(
+      bucket,
+      filename,
+      req.file.buffer,
+      req.file.mimetype
+    );
+
+    return res.json({
+      message: "File uploaded successfully",
+      fileUrl: fileUrl,
+      filename: filename,
+      originalName: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      bucket: bucket
+    });
+
   } catch (error: any) {
-    console.error("Error serving image:", error);
+    console.error("Error uploading file:", error);
     return res.status(500).json({
       message: "Internal server error",
       error: error.message
@@ -305,91 +318,10 @@ export async function serveImage(req: Request, res: Response) {
   }
 }
 
-// Endpoint para servir documentos (PDFs)
-export async function serveDocument(req: Request, res: Response) {
-  try {
-    const { filename } = req.params;
-    const { type } = req.query; // 'documents' o 'cover-letters'
-    
-    if (!filename) {
-      return res.status(400).json({ message: "Filename is required" });
-    }
-    
-    // Determinar la carpeta según el tipo
-    let folder = 'documents'; // default
-    if (type === 'cover-letters') {
-      folder = 'cover-letters';
-    }
-    
-    const documentPath = path.join(__dirname, `../uploads/${folder}`, filename);
-    
-    if (!fs.existsSync(documentPath)) {
-      return res.status(404).json({ message: "Document not found" });
-    }
-    
-    // Configurar headers para descarga de PDF
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    
-    return res.sendFile(documentPath);
-  } catch (error: any) {
-    console.error("Error serving document:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message
-    });
+// Middleware para subir archivo genérico
+export const uploadGenericFile = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB máximo para archivos genéricos
   }
-}
-
-// Endpoint para servir videos
-export async function serveVideo(req: Request, res: Response) {
-  try {
-    const { filename } = req.params;
-    
-    if (!filename) {
-      return res.status(400).json({ message: "Filename is required" });
-    }
-    
-    const videoPath = path.join(__dirname, '../uploads/videos', filename);
-    
-    if (!fs.existsSync(videoPath)) {
-      return res.status(404).json({ message: "Video not found" });
-    }
-    
-    // Configurar headers para streaming de video
-    const stat = fs.statSync(videoPath);
-    const fileSize = stat.size;
-    const range = req.headers.range;
-    
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0] || "0", 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunksize = (end - start) + 1;
-      const file = fs.createReadStream(videoPath, { start, end });
-      const head = {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
-        'Content-Type': 'video/mp4',
-      };
-      res.writeHead(206, head);
-      file.pipe(res);
-      return;
-    } else {
-      const head = {
-        'Content-Length': fileSize,
-        'Content-Type': 'video/mp4',
-      };
-      res.writeHead(200, head);
-      fs.createReadStream(videoPath).pipe(res);
-      return;
-    }
-  } catch (error: any) {
-    console.error("Error serving video:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message
-    });
-  }
-}
+}).single('file');

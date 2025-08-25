@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { uploadImageToMinIO } from '../middleware/minioUpload';
+import { uploadEventImageToMinIO } from '../middleware/minioUpload';
 import {
   getEvents,
   getEvent,
@@ -33,8 +33,8 @@ router.post('/:id/attend', attendEvent);
 router.delete('/:id/unattend', unattendEvent);
 
 // Rutas para creadores, super admin, municipios y organizaciones
-router.post('/', uploadImageToMinIO, createEvent);
-router.put('/:id', uploadImageToMinIO, updateEvent);
+router.post('/', uploadEventImageToMinIO, createEvent);
+router.put('/:id', uploadEventImageToMinIO, updateEvent);
 router.delete('/:id', deleteEvent);
 
 // Rutas para gestión de asistentes (solo creadores, super admin, municipios y organizaciones)

@@ -3,71 +3,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadCoverLetter = exports.uploadCV = exports.uploadLessonVideo = exports.uploadProfileImage = void 0;
+exports.uploadGenericFile = exports.uploadCoverLetter = exports.uploadCV = exports.uploadLessonVideo = exports.uploadProfileImage = void 0;
 exports.uploadProfileImageHandler = uploadProfileImageHandler;
 exports.uploadCVHandler = uploadCVHandler;
 exports.uploadCoverLetterHandler = uploadCoverLetterHandler;
 exports.uploadLessonVideoHandler = uploadLessonVideoHandler;
-exports.serveImage = serveImage;
-exports.serveDocument = serveDocument;
-exports.serveVideo = serveVideo;
+exports.uploadGenericFileHandler = uploadGenericFileHandler;
 const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
-const imageStorage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../uploads/images');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
-    }
-});
-const videoStorage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../uploads/videos');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
-    }
-});
-const documentStorage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../uploads/documents');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
-    }
-});
-const coverLetterStorage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => {
-        const uploadDir = path_1.default.join(__dirname, '../uploads/cover-letters');
-        if (!fs_1.default.existsSync(uploadDir)) {
-            fs_1.default.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (_req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path_1.default.extname(file.originalname));
-    }
-});
+const minio_1 = require("../lib/minio");
+const memoryStorage = multer_1.default.memoryStorage();
 const imageUpload = (0, multer_1.default)({
-    storage: imageStorage,
+    storage: memoryStorage,
     limits: {
         fileSize: 2 * 1024 * 1024,
     },
@@ -82,7 +28,7 @@ const imageUpload = (0, multer_1.default)({
     }
 });
 const videoUpload = (0, multer_1.default)({
-    storage: videoStorage,
+    storage: memoryStorage,
     limits: {
         fileSize: 100 * 1024 * 1024,
     },
@@ -105,7 +51,7 @@ const videoUpload = (0, multer_1.default)({
     }
 });
 const documentUpload = (0, multer_1.default)({
-    storage: documentStorage,
+    storage: memoryStorage,
     limits: {
         fileSize: 10 * 1024 * 1024,
     },
@@ -120,7 +66,7 @@ const documentUpload = (0, multer_1.default)({
     }
 });
 const coverLetterUpload = (0, multer_1.default)({
-    storage: coverLetterStorage,
+    storage: memoryStorage,
     limits: {
         fileSize: 10 * 1024 * 1024,
     },
@@ -138,6 +84,12 @@ exports.uploadProfileImage = imageUpload.single('profileImage');
 exports.uploadLessonVideo = videoUpload.single('video');
 exports.uploadCV = documentUpload.single('cvFile');
 exports.uploadCoverLetter = coverLetterUpload.single('coverLetterFile');
+function generateUniqueFilename(originalname, prefix = '') {
+    const timestamp = Date.now();
+    const random = Math.round(Math.random() * 1E9);
+    const extension = originalname.split('.').pop();
+    return `${prefix}${timestamp}-${random}.${extension}`;
+}
 async function uploadProfileImageHandler(req, res) {
     try {
         const user = req.user;
@@ -147,11 +99,15 @@ async function uploadProfileImageHandler(req, res) {
         if (!req.file) {
             return res.status(400).json({ message: "No image file provided" });
         }
-        const imageUrl = `/uploads/images/${req.file.filename}`;
+        const filename = generateUniqueFilename(req.file.originalname, 'profile-');
+        const imageUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.IMAGES, filename, req.file.buffer, req.file.mimetype);
         return res.json({
             message: "Image uploaded successfully",
             imageUrl: imageUrl,
-            filename: req.file.filename
+            filename: filename,
+            originalName: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype
         });
     }
     catch (error) {
@@ -171,11 +127,12 @@ async function uploadCVHandler(req, res) {
         if (!req.file) {
             return res.status(400).json({ message: "No CV file provided" });
         }
-        const cvUrl = `/uploads/documents/${req.file.filename}`;
+        const filename = generateUniqueFilename(req.file.originalname, 'cv-');
+        const cvUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, filename, req.file.buffer, req.file.mimetype);
         return res.json({
             message: "CV uploaded successfully",
             cvUrl: cvUrl,
-            filename: req.file.filename,
+            filename: filename,
             originalName: req.file.originalname,
             size: req.file.size,
             mimetype: req.file.mimetype
@@ -198,11 +155,12 @@ async function uploadCoverLetterHandler(req, res) {
         if (!req.file) {
             return res.status(400).json({ message: "No cover letter file provided" });
         }
-        const coverLetterUrl = `/uploads/cover-letters/${req.file.filename}`;
+        const filename = generateUniqueFilename(req.file.originalname, 'cover-');
+        const coverLetterUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, filename, req.file.buffer, req.file.mimetype);
         return res.json({
             message: "Cover letter uploaded successfully",
             coverLetterUrl: coverLetterUrl,
-            filename: req.file.filename,
+            filename: filename,
             originalName: req.file.originalname,
             size: req.file.size,
             mimetype: req.file.mimetype
@@ -225,11 +183,12 @@ async function uploadLessonVideoHandler(req, res) {
         if (!req.file) {
             return res.status(400).json({ message: "No video file provided" });
         }
-        const videoUrl = `/uploads/videos/${req.file.filename}`;
+        const filename = generateUniqueFilename(req.file.originalname, 'video-');
+        const videoUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.VIDEOS, filename, req.file.buffer, req.file.mimetype);
         return res.json({
             message: "Video uploaded successfully",
             videoUrl: videoUrl,
-            filename: req.file.filename,
+            filename: filename,
             originalName: req.file.originalname,
             size: req.file.size,
             mimetype: req.file.mimetype
@@ -243,98 +202,49 @@ async function uploadLessonVideoHandler(req, res) {
         });
     }
 }
-async function serveImage(req, res) {
+async function uploadGenericFileHandler(req, res) {
     try {
-        const { filename } = req.params;
-        if (!filename) {
-            return res.status(400).json({ message: "Filename is required" });
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ message: "Authentication required" });
         }
-        const imagePath = path_1.default.join(__dirname, '../uploads/images', filename);
-        if (!fs_1.default.existsSync(imagePath)) {
-            return res.status(404).json({ message: "Image not found" });
+        if (!req.file) {
+            return res.status(400).json({ message: "No file provided" });
         }
-        return res.sendFile(imagePath);
+        let bucket = minio_1.BUCKETS.RESOURCES;
+        if (req.file.mimetype.startsWith('image/')) {
+            bucket = minio_1.BUCKETS.IMAGES;
+        }
+        else if (req.file.mimetype.startsWith('video/')) {
+            bucket = minio_1.BUCKETS.VIDEOS;
+        }
+        else if (req.file.mimetype === 'application/pdf') {
+            bucket = minio_1.BUCKETS.DOCUMENTS;
+        }
+        const filename = generateUniqueFilename(req.file.originalname);
+        const fileUrl = await (0, minio_1.uploadToMinio)(bucket, filename, req.file.buffer, req.file.mimetype);
+        return res.json({
+            message: "File uploaded successfully",
+            fileUrl: fileUrl,
+            filename: filename,
+            originalName: req.file.originalname,
+            size: req.file.size,
+            mimetype: req.file.mimetype,
+            bucket: bucket
+        });
     }
     catch (error) {
-        console.error("Error serving image:", error);
+        console.error("Error uploading file:", error);
         return res.status(500).json({
             message: "Internal server error",
             error: error.message
         });
     }
 }
-async function serveDocument(req, res) {
-    try {
-        const { filename } = req.params;
-        const { type } = req.query;
-        if (!filename) {
-            return res.status(400).json({ message: "Filename is required" });
-        }
-        let folder = 'documents';
-        if (type === 'cover-letters') {
-            folder = 'cover-letters';
-        }
-        const documentPath = path_1.default.join(__dirname, `../uploads/${folder}`, filename);
-        if (!fs_1.default.existsSync(documentPath)) {
-            return res.status(404).json({ message: "Document not found" });
-        }
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-        return res.sendFile(documentPath);
+exports.uploadGenericFile = (0, multer_1.default)({
+    storage: memoryStorage,
+    limits: {
+        fileSize: 50 * 1024 * 1024,
     }
-    catch (error) {
-        console.error("Error serving document:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        });
-    }
-}
-async function serveVideo(req, res) {
-    try {
-        const { filename } = req.params;
-        if (!filename) {
-            return res.status(400).json({ message: "Filename is required" });
-        }
-        const videoPath = path_1.default.join(__dirname, '../uploads/videos', filename);
-        if (!fs_1.default.existsSync(videoPath)) {
-            return res.status(404).json({ message: "Video not found" });
-        }
-        const stat = fs_1.default.statSync(videoPath);
-        const fileSize = stat.size;
-        const range = req.headers.range;
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0] || "0", 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-            const chunksize = (end - start) + 1;
-            const file = fs_1.default.createReadStream(videoPath, { start, end });
-            const head = {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4',
-            };
-            res.writeHead(206, head);
-            file.pipe(res);
-            return;
-        }
-        else {
-            const head = {
-                'Content-Length': fileSize,
-                'Content-Type': 'video/mp4',
-            };
-            res.writeHead(200, head);
-            fs_1.default.createReadStream(videoPath).pipe(res);
-            return;
-        }
-    }
-    catch (error) {
-        console.error("Error serving video:", error);
-        return res.status(500).json({
-            message: "Internal server error",
-            error: error.message
-        });
-    }
-}
+}).single('file');
 //# sourceMappingURL=FileUploadController.js.map

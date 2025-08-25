@@ -9,6 +9,11 @@ const storage = multer.memoryStorage();
 
 // Middleware para subir imágenes (eventos, noticias, perfiles, etc.)
 export const uploadImageToMinIO = (req: any, res: any, next: any) => {
+  console.log('🔍 MINIO UPLOAD MIDDLEWARE - Iniciando...');
+  console.log('Content-Type:', req.get('Content-Type'));
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
   multer({
     storage: storage,
     limits: {
@@ -34,6 +39,10 @@ export const uploadImageToMinIO = (req: any, res: any, next: any) => {
     }
 
     // Procesar archivos subidos
+    console.log('🔍 MINIO UPLOAD - Archivos recibidos:', req.files);
+    console.log('🔍 MINIO UPLOAD - Tipo de req.files:', typeof req.files);
+    console.log('🔍 MINIO UPLOAD - Keys de req.files:', req.files ? Object.keys(req.files) : 'No files');
+    
     if (req.files) {
       const uploadedFiles: any = {};
 
@@ -75,8 +84,148 @@ export const uploadImageToMinIO = (req: any, res: any, next: any) => {
       }
 
       req.uploadedImages = uploadedFiles;
+      console.log('🔍 MINIO UPLOAD - uploadedFiles final:', uploadedFiles);
+    } else {
+      console.log('🔍 MINIO UPLOAD - No se encontraron archivos para procesar');
     }
 
+    console.log('🔍 MINIO UPLOAD - Finalizando middleware');
+    next();
+  });
+};
+
+// Middleware específico para eventos que combina MinIO upload con conversión de tipos
+export const uploadEventImageToMinIO = (req: any, res: any, next: any) => {
+  console.log('🔍 EVENT MINIO UPLOAD MIDDLEWARE - Iniciando...');
+  console.log('Content-Type:', req.get('Content-Type'));
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB máximo para imágenes
+      files: 1
+    },
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (allowedTypes.includes(file?.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
+      }
+    }
+  }).fields([
+    { name: 'image', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    // Procesar archivos subidos a MinIO
+    console.log('🔍 EVENT MINIO UPLOAD - Archivos recibidos:', req.files);
+    
+    if (req.files) {
+      const uploadedFiles: any = {};
+
+      for (const [fieldName, files] of Object.entries(req.files)) {
+        const fileArray = files as Express.Multer.File[];
+        if (fileArray.length > 0) {
+          const file = fileArray[0];
+          
+          // Generar nombre único
+          const timestamp = Date.now();
+          const randomSuffix = Math.round(Math.random() * 1E9);
+          const fileExtension = path.extname(file?.originalname);
+          const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+
+          try {
+            const imageUrl = await uploadToMinio(
+              BUCKETS.IMAGES,
+              objectName,
+              file?.buffer || Buffer.alloc(0),
+              file?.mimetype || 'image/jpeg'
+            );
+
+            uploadedFiles[fieldName] = {
+              url: imageUrl,
+              filename: objectName,
+              originalName: file?.originalname,
+              size: file?.size,
+              mimetype: file?.mimetype,
+              bucket: BUCKETS.IMAGES
+            };
+          } catch (error) {
+            console.error(`Error subiendo imagen ${fieldName}:`, error);
+            return res.status(500).json({
+              message: `Error subiendo imagen ${fieldName}`,
+              error: (error as any).message
+            });
+          }
+        }
+      }
+
+      req.uploadedImages = uploadedFiles;
+      console.log('🔍 EVENT MINIO UPLOAD - uploadedFiles final:', uploadedFiles);
+    } else {
+      console.log('🔍 EVENT MINIO UPLOAD - No se encontraron archivos para procesar');
+    }
+
+    // Convertir tipos de datos para eventos
+    if (req.body) {
+      // Convert string values to appropriate types for events
+      if (req.body.featured !== undefined) {
+        req.body.featured = req.body.featured === 'true';
+      }
+      if (req.body.maxCapacity && typeof req.body.maxCapacity === 'string') {
+        req.body.maxCapacity = parseInt(req.body.maxCapacity);
+      }
+      if (req.body.price && typeof req.body.price === 'string') {
+        req.body.price = parseFloat(req.body.price);
+      }
+      
+      // Handle arrays that come as JSON strings
+      if (req.body.tags && typeof req.body.tags === 'string') {
+        try {
+          req.body.tags = JSON.parse(req.body.tags);
+        } catch (e) {
+          // If JSON parsing fails, try comma-separated values
+          req.body.tags = req.body.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+        }
+      }
+      
+      if (req.body.requirements && typeof req.body.requirements === 'string') {
+        try {
+          req.body.requirements = JSON.parse(req.body.requirements);
+        } catch (e) {
+          req.body.requirements = req.body.requirements.split(',').map((req: string) => req.trim()).filter((req: string) => req);
+        }
+      }
+      
+      if (req.body.agenda && typeof req.body.agenda === 'string') {
+        try {
+          req.body.agenda = JSON.parse(req.body.agenda);
+        } catch (e) {
+          req.body.agenda = req.body.agenda.split(',').map((item: string) => item.trim()).filter((item: string) => item);
+        }
+      }
+      
+      if (req.body.speakers && typeof req.body.speakers === 'string') {
+        try {
+          req.body.speakers = JSON.parse(req.body.speakers);
+        } catch (e) {
+          req.body.speakers = req.body.speakers.split(',').map((speaker: string) => speaker.trim()).filter((speaker: string) => speaker);
+        }
+      }
+      
+      // Ensure arrays are always arrays
+      if (!Array.isArray(req.body.tags)) req.body.tags = [];
+      if (!Array.isArray(req.body.requirements)) req.body.requirements = [];
+      if (!Array.isArray(req.body.agenda)) req.body.agenda = [];
+      if (!Array.isArray(req.body.speakers)) req.body.speakers = [];
+    }
+
+    console.log('🔍 EVENT MINIO UPLOAD - Finalizando middleware');
     next();
   });
 };

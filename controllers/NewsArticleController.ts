@@ -3,6 +3,20 @@ import { Request, Response } from "express";
 import { NewsStatus, NewsPriority, NewsType } from "@prisma/client";
 import { getFileUrl, deleteFile } from "../middleware/upload";
 
+// Interface para extender Request con MinIO
+interface MinIORequest extends Request {
+  uploadedImages?: {
+    [key: string]: {
+      url: string;
+      filename: string;
+      originalName: string;
+      size: number;
+      mimetype: string;
+      bucket: string;
+    };
+  };
+}
+
 // Helper function to get the correct authorId for a user
 async function getUserAuthorId(user: any): Promise<string> {
   if (user.type === 'company' || user.role === 'COMPANIES') {
@@ -558,7 +572,7 @@ export async function getNewsArticle(req: Request, res: Response): Promise<Respo
  *       400:
  *         description: Invalid input data
  */
-export async function createNewsArticle(req: Request, res: Response): Promise<Response> {
+export async function createNewsArticle(req: MinIORequest, res: Response): Promise<Response> {
   try {
     console.log('=== AUTH DEBUG ===');
     console.log('User object:', JSON.stringify((req as any).user, null, 2));
@@ -655,11 +669,23 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
     const videoUrl = req.body.videoUrl;
     const relatedLinks = req.body.relatedLinks;
 
-    // Handle uploaded image file
+    // Handle uploaded image file from MinIO
     let finalImageUrl = imageUrl;
-    if (files['image'] && files['image'][0]) {
-      finalImageUrl = getFileUrl(files['image'][0].filename);
+    console.log('=== IMAGE DEBUG ===');
+    console.log('req.uploadedImages:', req.uploadedImages);
+    console.log('req.files:', req.files);
+    console.log('imageUrl from body:', imageUrl);
+    console.log('finalImageUrl before processing:', finalImageUrl);
+    
+    if (req.uploadedImages && req.uploadedImages.image) {
+      finalImageUrl = req.uploadedImages.image.url;
+      console.log('📸 Imagen subida a MinIO:', finalImageUrl);
+    } else {
+      console.log('❌ No se encontró imagen subida en req.uploadedImages');
     }
+    
+    console.log('finalImageUrl after processing:', finalImageUrl);
+    console.log('===================');
     
     // Validate required fields
     if (!title?.trim() || !content?.trim() || !summary?.trim() || !category?.trim()) {
@@ -919,7 +945,7 @@ export async function createNewsArticle(req: Request, res: Response): Promise<Re
  *       404:
  *         description: News article not found
  */
-export async function updateNewsArticle(req: Request, res: Response): Promise<Response> {
+export async function updateNewsArticle(req: MinIORequest, res: Response): Promise<Response> {
   try {
     const user = (req as any).user;
     const { id } = req.params;
@@ -978,18 +1004,13 @@ export async function updateNewsArticle(req: Request, res: Response): Promise<Re
     const videoUrl = req.body.videoUrl;
     const relatedLinks = req.body.relatedLinks;
 
-    // Handle uploaded image file
+    // Handle uploaded image file from MinIO
     let finalImageUrl = imageUrl;
-    if (files['image'] && files['image'][0]) {
-      finalImageUrl = getFileUrl(files['image'][0].filename);
+    if (req.uploadedImages && req.uploadedImages.image) {
+      finalImageUrl = req.uploadedImages.image.url;
+      console.log('📸 Imagen actualizada en MinIO:', finalImageUrl);
       
-      // Delete old image if it exists and is a local file
-      if (article.imageUrl && article.imageUrl.startsWith('/uploads/')) {
-        const oldFilename = article.imageUrl.split('/').pop();
-        if (oldFilename) {
-          deleteFile(oldFilename);
-        }
-      }
+      // Note: MinIO handles file management automatically, no need to delete old files manually
     }
     
     // Validate enum values if provided

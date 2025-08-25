@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listYouthApplications = listYouthApplications;
 exports.getYouthApplication = getYouthApplication;
@@ -43,8 +10,7 @@ exports.getMessages = getMessages;
 exports.expressCompanyInterest = expressCompanyInterest;
 exports.getCompanyInterests = getCompanyInterests;
 const prisma_1 = require("../lib/prisma");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
+const minio_1 = require("../lib/minio");
 async function listYouthApplications(req, res) {
     try {
         const { status, isPublic, youthProfileId } = req.query;
@@ -246,27 +212,15 @@ async function createYouthApplication(req, res) {
         let finalCvUrl = null;
         let finalCoverLetterUrl = null;
         if (cvFile) {
-            const uploadDir = path.join(__dirname, '../uploads/youth-applications/cv');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-            const fileName = `cv_${user.id}_${Date.now()}${path.extname(cvFile.originalname)}`;
-            const filePath = path.join(uploadDir, fileName);
-            fs.writeFileSync(filePath, cvFile.buffer);
-            finalCvUrl = `/uploads/youth-applications/cv/${fileName}`;
+            const fileName = `cv_${user.id}_${Date.now()}.${cvFile.originalname.split('.').pop()}`;
+            finalCvUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, fileName, cvFile.buffer, cvFile.mimetype);
         }
         else if (cvUrl) {
             finalCvUrl = cvUrl;
         }
         if (coverLetterFile) {
-            const uploadDir = path.join(__dirname, '../uploads/youth-applications/cover-letters');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-            const fileName = `cover_${user.id}_${Date.now()}${path.extname(coverLetterFile.originalname)}`;
-            const filePath = path.join(uploadDir, fileName);
-            fs.writeFileSync(filePath, coverLetterFile.buffer);
-            finalCoverLetterUrl = `/uploads/youth-applications/cover-letters/${fileName}`;
+            const fileName = `cover_${user.id}_${Date.now()}.${coverLetterFile.originalname.split('.').pop()}`;
+            finalCoverLetterUrl = await (0, minio_1.uploadToMinio)(minio_1.BUCKETS.DOCUMENTS, fileName, coverLetterFile.buffer, coverLetterFile.mimetype);
         }
         else if (coverLetterUrl) {
             finalCoverLetterUrl = coverLetterUrl;

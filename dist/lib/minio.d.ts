@@ -7,6 +7,7 @@ export declare const BUCKETS: {
     readonly COURSES: "courses";
     readonly LESSONS: "lessons";
     readonly RESOURCES: "resources";
+    readonly AUDIO: "audio";
 };
 export declare function initializeBuckets(): Promise<void>;
 export declare function uploadToMinio(bucketName: string, objectName: string, fileBuffer: Buffer, contentType: string): Promise<string>;

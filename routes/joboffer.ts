@@ -1,8 +1,9 @@
-import { Router } from "express";
-import * as JobOfferController from "../controllers/JobOfferController";
+import express from "express";
 import { authenticateToken, requireSuperAdmin } from "../middleware/auth";
+import { uploadMultipleImagesToMinIO } from "../middleware/minioUpload";
+import * as JobOfferController from "../controllers/JobOfferController";
 
-const router = Router();
+const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
@@ -42,10 +43,10 @@ const requireJobOfferCreation = (req: any, res: any, next: any) => {
 };
 
 // POST /job-offers - Create new job offer (SuperAdmin, Organizations, and Companies)
-router.post("/", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.createJobOffer);
+router.post("/", requireJobOfferCreation, uploadMultipleImagesToMinIO, JobOfferController.createJobOffer);
 
 // PUT /job-offers/:id - Update job offer (SuperAdmin, Organizations, and Companies)
-router.put("/:id", requireJobOfferCreation, JobOfferController.uploadJobOfferImages, JobOfferController.updateJobOffer);
+router.put("/:id", requireJobOfferCreation, uploadMultipleImagesToMinIO, JobOfferController.updateJobOffer);
 
 // DELETE /job-offers/:id - Delete job offer (Super Admin only)
 router.delete("/:id", requireSuperAdmin, JobOfferController.deleteJobOffer);

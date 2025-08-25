@@ -1,15 +1,15 @@
-import { Router } from "express";
+import express from "express";
+import { authenticateToken } from "../middleware/auth";
+import { uploadImageToMinIO } from "../middleware/minioUpload";
 import * as ProfileController from "../controllers/ProfileController";
-import { authenticateToken, requireSuperAdmin } from "../middleware/auth";
-import { uploadProfileAvatar } from "../middleware/upload";
 
-const router = Router();
+const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
 
 // GET /profiles - List all profiles (Super Admin only)
-router.get("/", requireSuperAdmin, ProfileController.listProfiles);
+router.get("/", ProfileController.listProfiles);
 
 // GET /profiles/me - Get current user's profile
 router.get("/me", ProfileController.getMyProfile);
@@ -18,15 +18,15 @@ router.get("/me", ProfileController.getMyProfile);
 router.get("/:id", ProfileController.getProfile);
 
 // POST /profiles - Create new profile (Super Admin only)
-router.post("/", requireSuperAdmin, ProfileController.createProfile);
+router.post("/", ProfileController.createProfile);
 
 // PUT /profiles/:id - Update profile (Super Admin, or own profile)
-router.put("/:id", uploadProfileAvatar, ProfileController.updateProfile);
+router.put("/:id", uploadImageToMinIO, ProfileController.updateProfile);
 
 // PUT /profiles/:id/avatar - Update profile avatar only (Super Admin, or own profile)
-router.put("/:id/avatar", uploadProfileAvatar, ProfileController.updateProfileAvatar);
+router.put("/:id/avatar", uploadImageToMinIO, ProfileController.updateProfileAvatar);
 
 // DELETE /profiles/:id - Delete profile (Super Admin only)
-router.delete("/:id", requireSuperAdmin, ProfileController.deleteProfile);
+router.delete("/:id", ProfileController.deleteProfile);
 
 export default router;

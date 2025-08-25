@@ -5,6 +5,347 @@ import path from 'path'; // Added for path.extname
 // Configurar multer para almacenamiento en memoria (para luego subir a MinIO)
 const storage = multer.memoryStorage();
 
+// ===== MIDDLEWARES UNIFICADOS PARA MINIO =====
+
+// Middleware para subir imágenes (eventos, noticias, perfiles, etc.)
+export const uploadImageToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB máximo para imágenes
+      files: 1
+    },
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (allowedTypes.includes(file?.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
+      }
+    }
+  }).fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'avatar', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    // Procesar archivos subidos
+    if (req.files) {
+      const uploadedFiles: any = {};
+
+      for (const [fieldName, files] of Object.entries(req.files)) {
+        const fileArray = files as Express.Multer.File[];
+        if (fileArray.length > 0) {
+          const file = fileArray[0];
+          
+          // Generar nombre único
+          const timestamp = Date.now();
+          const randomSuffix = Math.round(Math.random() * 1E9);
+          const fileExtension = path.extname(file?.originalname);
+          const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+
+          try {
+            const imageUrl = await uploadToMinio(
+              BUCKETS.IMAGES,
+              objectName,
+              file?.buffer || Buffer.alloc(0),
+              file?.mimetype || 'image/jpeg'
+            );
+
+            uploadedFiles[fieldName] = {
+              url: imageUrl,
+              filename: objectName,
+              originalName: file?.originalname,
+              size: file?.size,
+              mimetype: file?.mimetype,
+              bucket: BUCKETS.IMAGES
+            };
+          } catch (error) {
+            console.error(`Error subiendo imagen ${fieldName}:`, error);
+            return res.status(500).json({
+              message: `Error subiendo imagen ${fieldName}`,
+              error: (error as any).message
+            });
+          }
+        }
+      }
+
+      req.uploadedImages = uploadedFiles;
+    }
+
+    next();
+  });
+};
+
+// Middleware para subir múltiples imágenes (job offers, etc.)
+export const uploadMultipleImagesToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB máximo por imagen
+      files: 10 // Máximo 10 imágenes
+    },
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (allowedTypes.includes(file?.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
+      }
+    }
+  }).fields([
+    { name: 'images', maxCount: 10 },
+    { name: 'logo', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    // Procesar archivos subidos
+    if (req.files) {
+      const uploadedFiles: any = {};
+
+      for (const [fieldName, files] of Object.entries(req.files)) {
+        const fileArray = files as Express.Multer.File[];
+        
+        if (fieldName === 'images') {
+          uploadedFiles.images = [];
+          
+          for (const file of fileArray) {
+            const timestamp = Date.now();
+            const randomSuffix = Math.round(Math.random() * 1E9);
+            const fileExtension = path.extname(file?.originalname);
+            const objectName = `job-image-${timestamp}-${randomSuffix}${fileExtension}`;
+
+            try {
+              const imageUrl = await uploadToMinio(
+                BUCKETS.IMAGES,
+                objectName,
+                file?.buffer || Buffer.alloc(0),
+                file?.mimetype || 'image/jpeg'
+              );
+
+              uploadedFiles.images.push({
+                url: imageUrl,
+                filename: objectName,
+                originalName: file?.originalname,
+                size: file?.size,
+                mimetype: file?.mimetype,
+                bucket: BUCKETS.IMAGES
+              });
+            } catch (error) {
+              console.error('Error subiendo imagen de trabajo:', error);
+              return res.status(500).json({
+                message: 'Error subiendo imagen de trabajo',
+                error: (error as any).message
+              });
+            }
+          }
+        } else if (fieldName === 'logo') {
+          const file = fileArray[0];
+          const timestamp = Date.now();
+          const randomSuffix = Math.round(Math.random() * 1E9);
+          const fileExtension = path.extname(file?.originalname);
+          const objectName = `job-logo-${timestamp}-${randomSuffix}${fileExtension}`;
+
+          try {
+            const logoUrl = await uploadToMinio(
+              BUCKETS.IMAGES,
+              objectName,
+              file?.buffer || Buffer.alloc(0),
+              file?.mimetype || 'image/jpeg'
+            );
+
+            uploadedFiles.logo = {
+              url: logoUrl,
+              filename: objectName,
+              originalName: file?.originalname,
+              size: file?.size,
+              mimetype: file?.mimetype,
+              bucket: BUCKETS.IMAGES
+            };
+          } catch (error) {
+            console.error('Error subiendo logo:', error);
+            return res.status(500).json({
+              message: 'Error subiendo logo',
+              error: (error as any).message
+            });
+          }
+        }
+      }
+
+      req.uploadedJobImages = uploadedFiles;
+    }
+
+    next();
+  });
+};
+
+// Middleware para subir documentos (PDFs, CVs, cartas de presentación)
+export const uploadDocumentsToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB máximo para documentos
+      files: 1
+    },
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ['application/pdf'];
+      if (allowedTypes.includes(file?.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos PDF'));
+      }
+    }
+  }).fields([
+    { name: 'document', maxCount: 1 },
+    { name: 'cv', maxCount: 1 },
+    { name: 'coverLetter', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    // Procesar archivos subidos
+    if (req.files) {
+      const uploadedFiles: any = {};
+
+      for (const [fieldName, files] of Object.entries(req.files)) {
+        const fileArray = files as Express.Multer.File[];
+        if (fileArray.length > 0) {
+          const file = fileArray[0];
+          
+          // Generar nombre único
+          const timestamp = Date.now();
+          const randomSuffix = Math.round(Math.random() * 1E9);
+          const fileExtension = path.extname(file?.originalname);
+          const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+
+          try {
+            const documentUrl = await uploadToMinio(
+              BUCKETS.DOCUMENTS,
+              objectName,
+              file?.buffer || Buffer.alloc(0),
+              file?.mimetype || 'application/pdf'
+            );
+
+            uploadedFiles[fieldName] = {
+              url: documentUrl,
+              filename: objectName,
+              originalName: file?.originalname,
+              size: file?.size,
+              mimetype: file?.mimetype,
+              bucket: BUCKETS.DOCUMENTS
+            };
+          } catch (error) {
+            console.error(`Error subiendo documento ${fieldName}:`, error);
+            return res.status(500).json({
+              message: `Error subiendo documento ${fieldName}`,
+              error: (error as any).message
+            });
+          }
+        }
+      }
+
+      req.uploadedDocuments = uploadedFiles;
+    }
+
+    next();
+  });
+};
+
+// Middleware para subir archivos de cursos
+export const uploadCourseFilesToMinIO = (req: any, res: any, next: any) => {
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB máximo para archivos de curso
+      files: 2 // Máximo 2 archivos (thumbnail + video)
+    },
+    fileFilter: (_req, file, cb) => {
+      if (file.fieldname === 'thumbnail') {
+        const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedImageTypes.includes(file?.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP) para thumbnail'));
+        }
+      } else if (file.fieldname === 'videoPreview') {
+        const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov'];
+        if (allowedVideoTypes.includes(file?.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Solo se permiten archivos de video (MP4, WebM, OGG, AVI, MOV) para video preview'));
+        }
+      } else {
+        cb(new Error('Nombre de campo inválido. Use "thumbnail" para imágenes o "videoPreview" para videos'));
+      }
+    }
+  }).fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'videoPreview', maxCount: 1 }
+  ])(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    // Procesar archivos subidos
+    if (req.files) {
+      const uploadedFiles: any = {};
+
+      for (const [fieldName, files] of Object.entries(req.files)) {
+        const fileArray = files as Express.Multer.File[];
+        if (fileArray.length > 0) {
+          const file = fileArray[0];
+          
+          // Generar nombre único
+          const timestamp = Date.now();
+          const randomSuffix = Math.round(Math.random() * 1E9);
+          const fileExtension = path.extname(file?.originalname);
+          const objectName = `course-${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+
+          // Determinar bucket según tipo de archivo
+          const bucket = fieldName === 'thumbnail' ? BUCKETS.IMAGES : BUCKETS.VIDEOS;
+
+          try {
+            const fileUrl = await uploadToMinio(
+              bucket,
+              objectName,
+              file?.buffer || Buffer.alloc(0),
+              file?.mimetype || 'application/octet-stream'
+            );
+
+            uploadedFiles[fieldName] = {
+              url: fileUrl,
+              filename: objectName,
+              originalName: file?.originalname,
+              size: file?.size,
+              mimetype: file?.mimetype,
+              bucket: bucket
+            };
+          } catch (error) {
+            console.error(`Error subiendo archivo de curso ${fieldName}:`, error);
+            return res.status(500).json({
+              message: `Error subiendo archivo de curso ${fieldName}`,
+              error: (error as any).message
+            });
+          }
+        }
+      }
+
+      req.uploadedCourseFiles = uploadedFiles;
+    }
+
+    next();
+  });
+};
+
+// ===== MIDDLEWARES EXISTENTES (mantener compatibilidad) =====
+
 // Configurar multer para videos de lecciones
 export const uploadLessonVideo = multer({
   storage: storage,

@@ -1,9 +1,9 @@
-import { Router } from "express";
-import * as CourseController from "../controllers/CourseController";
+import express from "express";
 import { authenticateToken, requireSuperAdmin } from "../middleware/auth";
-import { uploadCourseFiles } from "../middleware/upload";
+import { uploadCourseFilesToMinIO } from "../middleware/minioUpload";
+import * as CourseController from "../controllers/CourseController";
 
-const router = Router();
+const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
@@ -45,14 +45,10 @@ const requireCourseCreation = (req: any, res: any, next: any) => {
   });
 };
 
-// POST /courses - Create new course (SuperAdmin, Organizations, and Municipalities)
-router.post("/", requireCourseCreation, uploadCourseFiles, CourseController.createCourse);
-
-// POST /courses/json - Create new course without file uploads (JSON only)
+// Rutas para creadores, super admin, municipios y organizaciones
+router.post("/", requireCourseCreation, uploadCourseFilesToMinIO, CourseController.createCourse);
 router.post("/json", requireCourseCreation, CourseController.createCourse);
-
-// PUT /courses/:id - Update course (SuperAdmin, Organizations, and Municipalities)
-router.put("/:id", requireCourseCreation, uploadCourseFiles, CourseController.updateCourse);
+router.put("/:id", requireCourseCreation, uploadCourseFilesToMinIO, CourseController.updateCourse);
 
 // DELETE /courses/:id - Delete course (Super Admin only)
 router.delete("/:id", requireSuperAdmin, CourseController.deleteCourse);

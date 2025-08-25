@@ -1,45 +1,27 @@
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 
-// Configurar multer para subida de imágenes de JobOffer
-const jobOfferImageStorage = multer.diskStorage({
-  destination: (_req: any, _file: any, cb: any) => {
-    const uploadDir = path.join(__dirname, '../uploads/job-offers');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (_req: any, file: any, cb: any) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const jobOfferImageUpload = multer({
-  storage: jobOfferImageStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB máximo para imágenes
-  },
-  fileFilter: (_req: any, file: any, cb: any) => {
-    // Permitir solo imágenes
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
-    }
-  }
-});
-
-// Middleware para subir imágenes de JobOffer
-export const uploadJobOfferImages = jobOfferImageUpload.fields([
-  { name: 'images', maxCount: 10 }, // Máximo 10 imágenes
-  { name: 'logo', maxCount: 1 }     // 1 logo
-]);
+// Extender el tipo Request para incluir las propiedades de MinIO
+interface MinIORequest extends Request {
+  uploadedJobImages?: {
+    images?: Array<{
+      url: string;
+      filename: string;
+      originalName: string;
+      size: number;
+      mimetype: string;
+      bucket: string;
+    }>;
+    logo?: {
+      url: string;
+      filename: string;
+      originalName: string;
+      size: number;
+      mimetype: string;
+      bucket: string;
+    };
+  };
+}
 
 /**
  * @swagger
@@ -361,13 +343,12 @@ export async function getJobOffer(req: Request, res: Response) {
  *       400:
  *         description: Invalid input data
  */
-export async function createJobOffer(req: Request, res: Response) {
+export async function createJobOffer(req: MinIORequest, res: Response) {
   console.log('🚀 === INICIO DE CREACIÓN DE JOB OFFER ===');
   console.log('📋 Headers recibidos:', req.headers['content-type']);
   console.log('📦 Datos del body recibidos:', JSON.stringify(req.body, null, 2));
-  console.log('📁 Archivos recibidos:', req.files ? 'SÍ' : 'NO');
-  
-  // Extraer datos del FormData
+  console.log('📁 Archivos subidos a MinIO:', req.uploadedJobImages ? 'SÍ' : 'NO');
+
   const { 
     title, 
     description, 
@@ -390,10 +371,11 @@ export async function createJobOffer(req: Request, res: Response) {
     applicationDeadline,
     benefits
   } = req.body;
-  
+
+  // Validar campos requeridos
   if (!title || !description || !requirements || !location || !contractType || !workSchedule || !workModality || !experienceLevel || !companyId || !municipality) {
-    return res.status(400).json({ 
-      message: "title, description, requirements, location, contractType, workSchedule, workModality, experienceLevel, companyId, and municipality are required" 
+    return res.status(400).json({
+      message: "title, description, requirements, location, contractType, workSchedule, workModality, experienceLevel, companyId, and municipality are required"
     });
   }
 
@@ -406,57 +388,58 @@ export async function createJobOffer(req: Request, res: Response) {
     return res.status(400).json({ message: "Invalid or inactive company" });
   }
 
-  // Procesar imágenes subidas
+  // Procesar imágenes subidas a MinIO
   let imageUrls: string[] = [];
   let logoUrl: string | null = null;
 
-  console.log('📸 === LOGS DE PROCESAMIENTO DE IMÁGENES ===');
-  console.log('🔍 Verificando si hay archivos en req.files:', !!req.files);
+  console.log('📸 === LOGS DE PROCESAMIENTO DE IMÁGENES MINIO ===');
+  console.log('🔍 Verificando si hay archivos en req.uploadedJobImages:', !!req.uploadedJobImages);
   
-  if (req.files) {
-    console.log('📁 Archivos recibidos en req.files:', Object.keys(req.files));
-    console.log('📋 Contenido completo de req.files:', JSON.stringify(req.files, null, 2));
-  }
+  if (req.uploadedJobImages) {
+    console.log('📁 Archivos recibidos en req.uploadedJobImages:', Object.keys(req.uploadedJobImages));
+    console.log('📋 Contenido completo de req.uploadedJobImages:', JSON.stringify(req.uploadedJobImages, null, 2));
 
-  // Procesar imágenes múltiples
-  if (req.files && (req.files as any).images) {
-    const imageFiles = (req.files as any).images;
-    console.log('🖼️  Imágenes encontradas:', imageFiles.length);
-    console.log('📝 Detalles de las imágenes:');
-    imageFiles.forEach((file: any, index: number) => {
-      console.log(`   Imagen ${index + 1}:`);
-      console.log(`     - Nombre original: ${file.originalname}`);
-      console.log(`     - Nombre guardado: ${file.filename}`);
-      console.log(`     - Tamaño: ${file.size} bytes`);
-      console.log(`     - Tipo MIME: ${file.mimetype}`);
-      console.log(`     - Ruta temporal: ${file.path}`);
-    });
-    imageUrls = imageFiles.map((file: any) => `/uploads/job-offers/${file.filename}`);
-    console.log('🔗 URLs de imágenes generadas:', imageUrls);
-  } else {
-    console.log('❌ No se encontraron imágenes en req.files.images');
-  }
+    // Procesar imágenes múltiples
+    if (req.uploadedJobImages.images) {
+      console.log('🖼️ Imágenes encontradas:', req.uploadedJobImages.images.length);
+      console.log('📝 Detalles de las imágenes:');
+      req.uploadedJobImages.images.forEach((image: any, index: number) => {
+        console.log(`   Imagen ${index + 1}:`);
+        console.log(`     - Nombre original: ${image.originalName}`);
+        console.log(`     - Nombre guardado: ${image.filename}`);
+        console.log(`     - Tamaño: ${image.size} bytes`);
+        console.log(`     - Tipo MIME: ${image.mimetype}`);
+        console.log(`     - URL MinIO: ${image.url}`);
+      });
+      imageUrls = req.uploadedJobImages.images.map((image: any) => image.url);
+      console.log('🔗 URLs de imágenes de MinIO:', imageUrls);
+    } else {
+      console.log('❌ No se encontraron imágenes en req.uploadedJobImages.images');
+    }
 
-  // Procesar logo
-  if (req.files && (req.files as any).logo) {
-    const logoFile = (req.files as any).logo[0];
-    console.log('🏢 Logo encontrado:');
-    console.log(`   - Nombre original: ${logoFile.originalname}`);
-    console.log(`   - Nombre guardado: ${logoFile.filename}`);
-    console.log(`   - Tamaño: ${logoFile.size} bytes`);
-    console.log(`   - Tipo MIME: ${logoFile.mimetype}`);
-    console.log(`   - Ruta temporal: ${logoFile.path}`);
-    logoUrl = `/uploads/job-offers/${logoFile.filename}`;
-    console.log('🔗 URL del logo generada:', logoUrl);
+    // Procesar logo
+    if (req.uploadedJobImages.logo) {
+      const logo = req.uploadedJobImages.logo;
+      console.log('🏢 Logo encontrado:');
+      console.log(`   - Nombre original: ${logo.originalName}`);
+      console.log(`   - Nombre guardado: ${logo.filename}`);
+      console.log(`   - Tamaño: ${logo.size} bytes`);
+      console.log(`   - Tipo MIME: ${logo.mimetype}`);
+      console.log(`   - URL MinIO: ${logo.url}`);
+      logoUrl = logo.url;
+      console.log('🔗 URL del logo de MinIO:', logoUrl);
+    } else {
+      console.log('❌ No se encontró logo en req.uploadedJobImages.logo');
+    }
   } else {
-    console.log('❌ No se encontró logo en req.files.logo');
+    console.log('❌ No se encontraron archivos en req.uploadedJobImages');
   }
 
   console.log('📊 Resumen final:');
   console.log(`   - Número de imágenes: ${imageUrls.length}`);
   console.log(`   - URLs de imágenes: ${JSON.stringify(imageUrls)}`);
   console.log(`   - URL del logo: ${logoUrl}`);
-  console.log('📸 === FIN DE LOGS DE IMÁGENES ===');
+  console.log('📸 === FIN DE LOGS DE IMÁGENES MINIO ===');
 
   // Procesar arrays de strings (skillsRequired, desiredSkills)
   const skillsRequiredArray = skillsRequired ? (typeof skillsRequired === 'string' ? JSON.parse(skillsRequired) : skillsRequired) : [];
@@ -529,7 +512,7 @@ export async function createJobOffer(req: Request, res: Response) {
  *       404:
  *         description: Job offer not found
  */
-export async function updateJobOffer(req: Request, res: Response) {
+export async function updateJobOffer(req: MinIORequest, res: Response) {
   try {
     const { id } = req.params;
     if (!id) {
@@ -575,9 +558,8 @@ export async function updateJobOffer(req: Request, res: Response) {
     let logoUrl = (existingJobOffer as any).logo;
 
     // Procesar nuevas imágenes múltiples
-    if (req.files && (req.files as any).images) {
-      const imageFiles = (req.files as any).images;
-      const newImageUrls = imageFiles.map((file: any) => `/uploads/job-offers/${file.filename}`);
+    if (req.uploadedJobImages && req.uploadedJobImages.images) {
+      const newImageUrls = req.uploadedJobImages.images.map((image: any) => image.url);
       
       // Si se envían nuevas imágenes, reemplazar las existentes
       // Si quieres agregar a las existentes, usa: imageUrls = [...imageUrls, ...newImageUrls];
@@ -585,9 +567,9 @@ export async function updateJobOffer(req: Request, res: Response) {
     }
 
     // Procesar nuevo logo
-    if (req.files && (req.files as any).logo) {
-      const logoFile = (req.files as any).logo[0];
-      logoUrl = `/uploads/job-offers/${logoFile.filename}`;
+    if (req.uploadedJobImages && req.uploadedJobImages.logo) {
+      const logo = req.uploadedJobImages.logo;
+      logoUrl = logo.url;
     }
 
     // Procesar arrays de strings (skillsRequired, desiredSkills)

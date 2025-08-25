@@ -3,11 +3,89 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadResourceToMinIO = exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = void 0;
+exports.uploadImageToMinIO = exports.uploadResourceToMinIO = exports.uploadLessonResourceToMinIO = exports.processAndUploadLessonFiles = exports.uploadLessonFiles = exports.processAndUploadVideo = exports.uploadLessonVideo = void 0;
 const multer_1 = __importDefault(require("multer"));
 const minio_1 = require("../lib/minio");
 const path_1 = __importDefault(require("path"));
+
+// Configurar multer para almacenamiento en memoria (para luego subir a MinIO)
 const storage = multer_1.default.memoryStorage();
+
+// Middleware para subir imágenes (eventos, noticias, perfiles, etc.)
+const uploadImageToMinIO = (req, res, next) => {
+    multer_1.default({
+        storage: storage,
+        limits: {
+            fileSize: 5 * 1024 * 1024, // 5MB máximo para imágenes
+            files: 1
+        },
+        fileFilter: (_req, file, cb) => {
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (allowedTypes.includes(file?.mimetype)) {
+                cb(null, true);
+            } else {
+                cb(new Error('Solo se permiten archivos de imagen (JPEG, PNG, GIF, WebP)'));
+            }
+        }
+    }).fields([
+        { name: 'image', maxCount: 1 },
+        { name: 'profileImage', maxCount: 1 },
+        { name: 'avatar', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            return next(err);
+        }
+
+        // Procesar archivos subidos
+        if (req.files) {
+            const uploadedFiles = {};
+
+            for (const [fieldName, files] of Object.entries(req.files)) {
+                const fileArray = files;
+                if (fileArray.length > 0) {
+                    const file = fileArray[0];
+                    
+                    // Generar nombre único
+                    const timestamp = Date.now();
+                    const randomSuffix = Math.round(Math.random() * 1E9);
+                    const fileExtension = path_1.default.extname(file?.originalname);
+                    const objectName = `${fieldName}-${timestamp}-${randomSuffix}${fileExtension}`;
+
+                    try {
+                        const imageUrl = await (0, minio_1.uploadToMinio)(
+                            minio_1.BUCKETS.IMAGES,
+                            objectName,
+                            file?.buffer || Buffer.alloc(0),
+                            file?.mimetype || 'image/jpeg'
+                        );
+
+                        uploadedFiles[fieldName] = {
+                            url: imageUrl,
+                            filename: objectName,
+                            originalName: file?.originalname,
+                            size: file?.size,
+                            mimetype: file?.mimetype,
+                            bucket: minio_1.BUCKETS.IMAGES
+                        };
+                    } catch (error) {
+                        console.error(`Error subiendo imagen ${fieldName}:`, error);
+                        return res.status(500).json({
+                            message: `Error subiendo imagen ${fieldName}`,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+
+            req.uploadedImages = uploadedFiles;
+        }
+
+        next();
+    });
+};
+
+exports.uploadImageToMinIO = uploadImageToMinIO;
 exports.uploadLessonVideo = (0, multer_1.default)({
     storage: storage,
     limits: {

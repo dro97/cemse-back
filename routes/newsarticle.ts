@@ -1,23 +1,21 @@
-import express from "express";
-import { listNewsArticles, getNewsArticle, createNewsArticle, updateNewsArticle, deleteNewsArticle, listPublicNewsArticles } from "../controllers/NewsArticleController";
-import { authenticateToken } from "../middleware/auth";
-import { uploadSingleImage, uploadNewsArticle } from "../middleware/upload";
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { uploadImageToMinIO } from '../middleware/minioUpload';
+import { createNewsArticle, listNewsArticles, getNewsArticle, updateNewsArticle, deleteNewsArticle } from '../controllers/NewsArticleController';
 
-// The uploadNewsArticle middleware now handles both JSON and multipart requests
-
+// The uploadImageToMinIO middleware now handles both JSON and multipart requests
 const router = express.Router();
 
-// Public endpoint (no authentication required)
-router.get("/public", listPublicNewsArticles);
-
-// Apply authentication to all other routes
+// Aplicar autenticación a todas las rutas
 router.use(authenticateToken);
 
-router.get("/", listNewsArticles);
-router.get("/:id", getNewsArticle);
-router.post("/", uploadNewsArticle, createNewsArticle); // Handles both JSON and multipart
-router.post("/json", createNewsArticle); // For application/json (legacy)
-router.put("/:id", uploadNewsArticle, updateNewsArticle);
+// Rutas públicas (requieren autenticación pero no roles específicos)
+router.get('/', listNewsArticles);
+router.get('/:id', getNewsArticle);
+
+// Rutas para creadores, super admin, municipios y organizaciones
+router.post("/", uploadImageToMinIO, createNewsArticle); // Handles both JSON and multipart
+router.put("/:id", uploadImageToMinIO, updateNewsArticle);
 router.delete("/:id", deleteNewsArticle);
 
 export default router;

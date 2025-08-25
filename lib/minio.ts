@@ -3,11 +3,11 @@ import { Readable } from 'stream';
 
 // Configuración de MinIO para Railway
 const minioClient = new Client({
-  endPoint: process.env['MINIO_PUBLIC_HOST'] || process.env['MINIO_ENDPOINT'] || '127.0.0.1',
-  port: parseInt(process.env['MINIO_PUBLIC_PORT'] || process.env['MINIO_PORT'] || '9000'),
-  useSSL: process.env['MINIO_PUBLIC_PORT'] === '443' || process.env['MINIO_USE_SSL'] === 'true',
-  accessKey: process.env['MINIO_ROOT_USER'] || process.env['MINIO_ACCESS_KEY'] || 'minioadmin',
-  secretKey: process.env['MINIO_ROOT_PASSWORD'] || process.env['MINIO_SECRET_KEY'] || 'minioadmin'
+  endPoint: process.env['MINIO_ENDPOINT'] || 'bucket-production-1a58.up.railway.app',
+  port: parseInt(process.env['MINIO_PORT'] || '443'),
+  useSSL: true, // Railway usa HTTPS
+  accessKey: process.env['MINIO_ACCESS_KEY'] || 'EhBs2erfGeHfTbz0NgdeM5qPYrlI0zUg',
+  secretKey: process.env['MINIO_SECRET_KEY'] || 'f09Z3szghyPcfAvF71xuk0C6xwxqKZPxYpZeRgIqoBtpeOjU'
 });
 
 // Nombres de buckets
@@ -17,8 +17,12 @@ export const BUCKETS = {
   DOCUMENTS: 'documents',
   COURSES: 'courses',
   LESSONS: 'lessons',
-  RESOURCES: 'resources'
+  RESOURCES: 'resources',
+  AUDIO: 'audio'
 } as const;
+
+// URL base para acceder a los archivos
+const BASE_URL = 'https://bucket-production-1a58.up.railway.app:443';
 
 // Inicializar buckets si no existen
 export async function initializeBuckets() {
@@ -32,26 +36,24 @@ export async function initializeBuckets() {
         console.log(`✅ Bucket '${bucketName}' creado exitosamente`);
       }
       
-      // Configurar política pública para videos, imágenes y recursos (siempre)
-      if (bucketName === BUCKETS.VIDEOS || bucketName === BUCKETS.IMAGES || bucketName === BUCKETS.RESOURCES) {
-        try {
-          const policy = {
-            Version: '2012-10-17',
-            Statement: [
-              {
-                Effect: 'Allow',
-                Principal: { AWS: ['*'] },
-                Action: ['s3:GetObject'],
-                Resource: [`arn:aws:s3:::${bucketName}/*`]
-              }
-            ]
-          };
-          
-          await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
-          console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
-        } catch (policyError) {
-          console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, (policyError as any).message);
-        }
+      // Configurar política pública para TODOS los buckets
+      try {
+        const policy = {
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: { AWS: ['*'] },
+              Action: ['s3:GetObject'],
+              Resource: [`arn:aws:s3:::${bucketName}/*`]
+            }
+          ]
+        };
+        
+        await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
+        console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
+      } catch (policyError) {
+        console.log(`⚠️ No se pudo configurar política para '${bucketName}':`, (policyError as any).message);
       }
     }
   } catch (error) {
@@ -73,23 +75,21 @@ export async function uploadToMinio(
       console.log(`📦 Creando bucket '${bucketName}'...`);
       await minioClient.makeBucket(bucketName, 'us-east-1');
       
-      // Configurar política pública para recursos
-      if (bucketName === 'resources') {
-        const policy = {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Effect: 'Allow',
-              Principal: { AWS: ['*'] },
-              Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${bucketName}/*`]
-            }
-          ]
-        };
-        
-        await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
-        console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
-      }
+      // Configurar política pública para TODOS los buckets
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${bucketName}/*`]
+          }
+        ]
+      };
+      
+      await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy));
+      console.log(`✅ Política pública configurada para bucket '${bucketName}'`);
     }
     
     // Verificar que el buffer es válido
@@ -105,9 +105,8 @@ export async function uploadToMinio(
       'Content-Type': contentType
     });
     
-    // Generar URL pública usando Railway
-    const baseUrl = process.env['MINIO_PUBLIC_ENDPOINT'] || process.env['MINIO_BASE_URL'] || `http://${process.env['MINIO_ENDPOINT'] || '127.0.0.1'}:${process.env['MINIO_PORT'] || '9000'}`;
-    const publicUrl = `${baseUrl}/${bucketName}/${objectName}`;
+    // Generar URL pública usando la URL de Railway
+    const publicUrl = `${BASE_URL}/${bucketName}/${objectName}`;
     
     console.log(`✅ Archivo subido exitosamente: ${publicUrl}`);
     return publicUrl;
